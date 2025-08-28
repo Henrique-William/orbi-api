@@ -18,7 +18,7 @@ public class User {
     private UUID Id;
 
     @ManyToOne
-    @JoinColumn(name = "enterprise_id")
+    @JoinColumn(name = "company_id")
     private Company companyId;
 
     @Column(nullable = false)
