@@ -11,16 +11,14 @@ import org.springframework.http.*;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.jwt.*;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.stream.Collectors;
 
 @RestController
+@RequestMapping("/api/auth")
 public class TokeController {
 
     private final JwtEncoder jwtEncoder;
@@ -35,7 +33,7 @@ public class TokeController {
         this.jwtDecoder = jwtDecoder;
     }
 
-    @PostMapping("/api/auth/login")
+    @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto loginRequestDto, HttpServletResponse response) {
 
         var user = userRepository.findByEmail(loginRequestDto.email());
@@ -75,7 +73,7 @@ public class TokeController {
         return ResponseEntity.ok(new LoginResponseDto(jwtValue, expiresIn));
     }
 
-    @GetMapping("/api/auth/validate")
+    @GetMapping("/validate")
     public ResponseEntity<Void> validateToken(HttpServletRequest request) {
 
         Cookie[] cookies = request.getCookies();
