@@ -45,7 +45,7 @@ public class UserController {
 
         user.setName(dto.name());
         user.setEmail(dto.email());
-        user.setPassword(dto.password());
+        user.setPassword(passwordEncoder.encode(dto.password()));
         user.setRoles(Set.of(basicRole));
 
         userRepository.save(user);
