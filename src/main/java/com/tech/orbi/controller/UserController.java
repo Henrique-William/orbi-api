@@ -13,11 +13,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 @RestController
+@RequestMapping("/api/auth")
 public class UserController {
 
     private final BCryptPasswordEncoder passwordEncoder;
@@ -31,9 +35,11 @@ public class UserController {
     }
 
     @Transactional
-    @PostMapping("/api/auth/register")
+    @PostMapping("/register")
     public ResponseEntity<Void> register(@RequestBody RegisterUserDto dto) {
 
+        var now = Instant.now();
+        var user = new User();
         var basicRole = roleRepository.findByName(Role.Values.BASIC.name());
         var userFromDb = userRepository.findByEmail(dto.email());
 
@@ -41,8 +47,7 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY);
         }
 
-        var user = new User();
-
+        user.setCreatedAt(Timestamp.from(now));
         user.setName(dto.name());
         user.setEmail(dto.email());
         user.setPassword(passwordEncoder.encode(dto.password()));
@@ -54,7 +59,7 @@ public class UserController {
 
     }
 
-    @GetMapping("/api/users")
+    @GetMapping("/users")
     public ResponseEntity<List<User>> listUsers(JwtAuthenticationToken token) {
 
         var user = userRepository.findById(UUID.fromString(token.getName()));
