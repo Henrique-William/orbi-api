@@ -13,7 +13,6 @@ public class RouteController {
 
     private final RouteService routeService;
 
-    // Injection
     public RouteController(RouteService routeService) {
         this.routeService = routeService;
     }
