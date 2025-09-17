@@ -47,7 +47,7 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY);
         }
 
-        user.setCreatedAt(Timestamp.from(now));
+//        user.setCreatedAt(Timestamp.from(now));
         user.setName(dto.name());
         user.setEmail(dto.email());
         user.setPassword(passwordEncoder.encode(dto.password()));
