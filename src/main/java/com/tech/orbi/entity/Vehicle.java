@@ -1,22 +1,20 @@
 package com.tech.orbi.entity;
 
-
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "tb_vehicle")
+@Table(name = "tb_vehicles")
 public class Vehicle {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "vehicle_id")
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
-    @ManyToOne
-    @JoinColumn(name = "company_id", nullable = false)
-    private Company companyId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "driver_user_id", nullable = false)
+    private User driver;
 
-    @Column(nullable = false)
+    @Column(name = "license_plate", unique = true, nullable = false)
     private String licensePlate;
 
     @Column(nullable = false)
@@ -26,24 +24,28 @@ public class Vehicle {
     private String model;
 
     @Column(nullable = false)
-    private int year;
+    private String color;
 
-    private float capacity_Kg;
+    @Column(nullable = false)
+    private Integer year;
 
-    public Long getId() {
+    @Column(name = "is_default", nullable = false)
+    private boolean isDefault;
+
+    public Integer getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
-    public Company getCompanyId() {
-        return companyId;
+    public User getDriver() {
+        return driver;
     }
 
-    public void setCompanyId(Company companyId) {
-        this.companyId = companyId;
+    public void setDriver(User driver) {
+        this.driver = driver;
     }
 
     public String getLicensePlate() {
@@ -70,20 +72,27 @@ public class Vehicle {
         this.model = model;
     }
 
-    public int getYear() {
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    public Integer getYear() {
         return year;
     }
 
-    public void setYear(int year) {
+    public void setYear(Integer year) {
         this.year = year;
     }
 
-    public float getCapacity_Kg() {
-        return capacity_Kg;
+    public boolean isDefault() {
+        return isDefault;
     }
 
-    public void setCapacity_Kg(float capacity_Kg) {
-        this.capacity_Kg = capacity_Kg;
+    public void setDefault(boolean aDefault) {
+        isDefault = aDefault;
     }
-
 }

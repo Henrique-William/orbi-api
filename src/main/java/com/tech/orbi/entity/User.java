@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -17,18 +19,23 @@ public class User {
     @Column(name = "user_id")
     private UUID Id;
 
-    @ManyToOne
-    @JoinColumn(name = "company_id")
-    private Company companyId;
-
-    @Column(nullable = false)
+    @Column(name = "full_name", nullable = false)
     private String name;
 
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "password_hash", nullable = false)
     private String password;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private DriverProfile driverProfile;
+
+    @OneToMany(mappedBy = "driver")
+    private List<Vehicle> vehicles;
 
     @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JoinTable(
@@ -38,7 +45,10 @@ public class User {
     )
     private Set<Role> roles;
 
-    private Timestamp createdAt;
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 
     public UUID getId() {
         return Id;
@@ -46,14 +56,6 @@ public class User {
 
     public void setId(UUID id) {
         Id = id;
-    }
-
-    public Company getCompanieId() {
-        return companyId;
-    }
-
-    public void setCompanieId(Company companyId) {
-        this.companyId = companyId;
     }
 
     public String getName() {
@@ -80,8 +82,28 @@ public class User {
         this.password = password;
     }
 
-    public Timestamp getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public DriverProfile getDriverProfile() {
+        return driverProfile;
+    }
+
+    public void setDriverProfile(DriverProfile driverProfile) {
+        this.driverProfile = driverProfile;
+    }
+
+    public List<Vehicle> getVehicles() {
+        return vehicles;
+    }
+
+    public void setVehicles(List<Vehicle> vehicles) {
+        this.vehicles = vehicles;
     }
 
     public Set<Role> getRoles() {
@@ -90,10 +112,6 @@ public class User {
 
     public void setRoles(Set<Role> roles) {
         this.roles = roles;
-    }
-
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
     }
 
     public boolean isLoginCorrect(LoginRequestDto loginRequestDto, PasswordEncoder passwordEncoder) {

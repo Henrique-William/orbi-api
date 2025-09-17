@@ -1,9 +1,7 @@
 package com.tech.orbi.config;
 
-import com.tech.orbi.Repository.CompanieRepository;
 import com.tech.orbi.Repository.RoleRepository;
 import com.tech.orbi.Repository.UserRepository;
-import com.tech.orbi.entity.Company;
 import com.tech.orbi.entity.Role;
 import com.tech.orbi.entity.User;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,14 +21,12 @@ public class AdminUserConfig implements CommandLineRunner {
     @Value("${admin.password}")
     private String adminPassword;
 
-    private final CompanieRepository companieRepository;
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 
 
-    public AdminUserConfig(CompanieRepository companieRepository, RoleRepository roleRepository, UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
-        this.companieRepository = companieRepository;
+    public AdminUserConfig(RoleRepository roleRepository, UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -43,22 +39,7 @@ public class AdminUserConfig implements CommandLineRunner {
         var now = Instant.now();
         var roleAdmin = roleRepository.findByName(Role.Values.ADMIN.name());
 
-        // Step 1: Find or create the admin company ONCE.
-        Company adminCompany = companieRepository.findByName("admin")
-                .orElseGet(() -> {
-                    System.out.println("Companie Admin not found, creating it.");
-                    var newCompanie = new Company();
-                    newCompanie.setName("admin");
-                    newCompanie.setLegalName("admin");
-                    newCompanie.setCnpj("admin");
-                    newCompanie.setContactEmail("admin");
-                    newCompanie.setContactPhone("admin");
-                    newCompanie.setFullAddress("admin");
-                    newCompanie.setCreatedAt(Timestamp.from(now));
-                    return companieRepository.save(newCompanie);
-                });
-
-        // Step 2: Find or create the admin user.
+        // Step 1: Find or create the admin user.
         userRepository.findByEmail("admin").ifPresentOrElse(
                 user -> System.out.println("Admin user already exists."),
                 () -> {
@@ -68,11 +49,8 @@ public class AdminUserConfig implements CommandLineRunner {
                     newUser.setEmail("admin");
                     newUser.setPassword(passwordEncoder.encode(adminPassword));
 
-                    // Step 3: Reuse the company object from Step 1.
-                    newUser.setCompanieId(adminCompany);
-
                     newUser.setRoles(Set.of(roleAdmin));
-                    newUser.setCreatedAt(Timestamp.from(now));
+//                    newUser.setCreatedAt(Timestamp.from(now));
                     userRepository.save(newUser);
                 }
         );
