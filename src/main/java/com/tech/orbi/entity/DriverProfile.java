@@ -7,11 +7,12 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
+@Table(name = "tb_driver_profile")
 public class DriverProfile {
 
     @Id
     @Column(name = "user_id")
-    private Integer userId;
+    private UUID userId;
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
@@ -40,11 +41,11 @@ public class DriverProfile {
         isActive = false; // Default to inactive on creation
     }
 
-    public Integer getUserId() {
+    public UUID getUserId() {
         return userId;
     }
 
-    public void setUserId(Integer userId) {
+    public void setUserId(UUID userId) {
         this.userId = userId;
     }
 
