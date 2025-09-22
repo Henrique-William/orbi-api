@@ -2,77 +2,34 @@ package com.tech.orbi.controller;
 
 import com.tech.orbi.Repository.RoleRepository;
 import com.tech.orbi.Repository.UserRepository;
-import com.tech.orbi.dto.RegisterUserDto;
-import com.tech.orbi.entity.Role;
-import com.tech.orbi.entity.User;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
+import com.tech.orbi.dto.UserDto;
 
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.util.Date;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/user")
 public class UserController {
 
-    private final BCryptPasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
 
     public UserController(BCryptPasswordEncoder passwordEncoder, UserRepository userRepository, RoleRepository roleRepository) {
-        this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
     }
 
-    @Transactional
-    @PostMapping("/register")
-    public ResponseEntity<Void> register(@RequestBody RegisterUserDto dto) {
-
-        var now = Instant.now();
-        var user = new User();
-        var basicRole = roleRepository.findByName(Role.Values.BASIC.name());
-        var userFromDb = userRepository.findByEmail(dto.email());
-
-        if (userFromDb.isPresent()) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY);
-        }
-
-//        user.setCreatedAt(Timestamp.from(now));
-        user.setName(dto.name());
-        user.setEmail(dto.email());
-        user.setPassword(passwordEncoder.encode(dto.password()));
-        user.setRoles(Set.of(basicRole));
-
-        userRepository.save(user);
-
-        return ResponseEntity.ok().build();
-
-    }
-
-    @GetMapping("/users")
-    public ResponseEntity<List<User>> listUsers(JwtAuthenticationToken token) {
-
-        var user = userRepository.findById(UUID.fromString(token.getName()));
-
-        var isAdmin = user.get().getRoles().stream().anyMatch(role -> role.getRoleName().equalsIgnoreCase(Role.Values.ADMIN.name()));
-
-        if (isAdmin) {
-            var users = userRepository.findAll();
-            return ResponseEntity.ok(users);
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
+    @GetMapping("/list")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<UserDto>> listUsers() {
+        List<UserDto> users = userRepository.findAll()
+                .stream()
+                .map(user -> new UserDto(user.getId(), user.getName(), user.getEmail()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(users);
     }
 
 }

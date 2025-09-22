@@ -1,9 +1,12 @@
 package com.tech.orbi.controller;
 
+import com.tech.orbi.Repository.RoleRepository;
 import com.tech.orbi.Repository.UserRepository;
 import com.tech.orbi.dto.LoginRequestDto;
 import com.tech.orbi.dto.LoginResponseDto;
+import com.tech.orbi.dto.RegisterUserDto;
 import com.tech.orbi.entity.Role;
+import com.tech.orbi.entity.User;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,26 +14,54 @@ import org.springframework.http.*;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.jwt.*;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
-public class TokeController {
+public class AuthController {
 
-    private final JwtEncoder jwtEncoder;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final JwtEncoder jwtEncoder;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtDecoder jwtDecoder;
 
-    public TokeController(JwtEncoder jwtEncoder, UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, JwtDecoder jwtDecoder) {
-        this.jwtEncoder = jwtEncoder;
+    public AuthController(UserRepository userRepository, RoleRepository roleRepository, JwtEncoder jwtEncoder, BCryptPasswordEncoder passwordEncoder, JwtDecoder jwtDecoder) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.jwtEncoder = jwtEncoder;
         this.passwordEncoder = passwordEncoder;
         this.jwtDecoder = jwtDecoder;
+    }
+
+    @Transactional
+    @PostMapping("/register")
+    public ResponseEntity<Void> register(@RequestBody RegisterUserDto dto) {
+
+        var user = new User();
+        var basicRole = roleRepository.findByName(Role.Values.BASIC.name());
+        var userFromDb = userRepository.findByEmail(dto.email());
+
+        if (userFromDb.isPresent()) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        user.setName(dto.name());
+        user.setEmail(dto.email());
+        user.setPassword(passwordEncoder.encode(dto.password()));
+        user.setRoles(Set.of(basicRole));
+
+        userRepository.save(user);
+
+        return ResponseEntity.ok().build();
+
     }
 
     @PostMapping("/login")
