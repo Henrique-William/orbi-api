@@ -13,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,8 +31,9 @@ public class UserController {
         this.userRepository = userRepository;
     }
 
-    @GetMapping
+    // Get all users
     @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
+    @GetMapping
     public ResponseEntity<UsersListDto> getAllUsers(@RequestParam(value = "page", defaultValue = "0") int page,
                                                     @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
 
@@ -61,8 +63,9 @@ public class UserController {
 
     }
 
+    // Get user by ID
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN') or authentication.principal.claims['sub'] == #userId.toString()")
     @GetMapping("/{userId}")
-    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public ResponseEntity<UserDto> getUserById(@PathVariable UUID userId) {
 
         Optional<User> userOptional = userRepository.findById(userId);
@@ -88,8 +91,10 @@ public class UserController {
         }
     }
 
+    // Update user By ID
+    @Transactional
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN') or authentication.principal.claims['sub'] == #userId.toString()")
     @PutMapping("/{userId}")
-    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public ResponseEntity<UserDto> updateUserById(@PathVariable UUID userId,
                                                   @RequestBody UserUpdateDto userUpdateDto) {
 
@@ -125,19 +130,25 @@ public class UserController {
         }
     }
 
+    @Transactional // Importante para garantir a atomicidade da operação no banco
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN') or authentication.name == #userId.toString()")
     @DeleteMapping("/{userId}")
-    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
-    public ResponseEntity<UserDto> deleteUserById(@PathVariable UUID userId) {
+    public ResponseEntity<Void> deleteUserById(@PathVariable UUID userId) {
 
-        if (userRepository.existsById(userId)) {
+        var userOptional = userRepository.findById(userId);
 
-            userRepository.deleteById(userId);
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+
+            // Remove the link with table (tb_users_role)
+            user.getRoles().clear();
+
+            // 2. Delete the user
+            userRepository.delete(user);
+
             return ResponseEntity.noContent().build();
-
-        } else {
-
-            return ResponseEntity.notFound().build();
-
         }
+
+        return ResponseEntity.notFound().build();
     }
 }

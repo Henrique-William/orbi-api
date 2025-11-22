@@ -4,7 +4,6 @@ import com.tech.orbi.dto.LoginRequestDto;
 import jakarta.persistence.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -37,7 +36,7 @@ public class User {
     @OneToMany(mappedBy = "driver")
     private List<Vehicle> vehicles;
 
-    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "tb_users_role",
             joinColumns = @JoinColumn(name = "user_id"),
