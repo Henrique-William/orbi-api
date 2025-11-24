@@ -17,20 +17,16 @@ public class Vehicle {
     @Column(name = "license_plate", unique = true, nullable = false)
     private String licensePlate;
 
-    @Column(nullable = false)
     private String brand;
-
-    @Column(nullable = false)
     private String model;
-
-    @Column(nullable = false)
     private String color;
-
-    @Column(nullable = false)
     private Integer year;
 
     @Column(name = "is_default", nullable = false)
     private boolean isDefault;
+
+    // Default Constructor
+    public Vehicle() {}
 
     public Integer getId() {
         return id;

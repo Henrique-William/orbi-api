@@ -7,15 +7,15 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "tb_driver_profile")
+@Table(name = "tb_driver_profiles")
 public class DriverProfile {
 
     @Id
     @Column(name = "user_id")
     private UUID userId;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
+    @OneToOne
+    @MapsId // A PK desta tabela é também FK para User
     @JoinColumn(name = "user_id")
     private User user;
 
@@ -34,6 +34,9 @@ public class DriverProfile {
 
     @Column(name = "profile_created_at", updatable = false)
     private LocalDateTime profileCreatedAt;
+
+    // Default Constructor
+    public DriverProfile() {}
 
     @PrePersist
     protected void onCreate() {

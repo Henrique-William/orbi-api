@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -16,7 +17,7 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "user_id")
-    private UUID Id;
+    private UUID id;
 
     @Column(name = "full_name", nullable = false)
     private String name;
@@ -24,17 +25,20 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
+    @Column(unique = true, nullable = false)
+    private String phone;
+
     @Column(name = "password_hash", nullable = false)
     private String password;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private DriverProfile driverProfile;
 
-    @OneToMany(mappedBy = "driver")
-    private List<Vehicle> vehicles;
+    @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL)
+    private List<Vehicle> vehicles = new ArrayList<>();
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -44,17 +48,20 @@ public class User {
     )
     private Set<Role> roles;
 
+    // Default Constructor
+    public User() {}
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
 
     public UUID getId() {
-        return Id;
+        return id;
     }
 
     public void setId(UUID id) {
-        Id = id;
+       this.id = id;
     }
 
     public String getName() {
@@ -71,6 +78,14 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     public String getPassword() {

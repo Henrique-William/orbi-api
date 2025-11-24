@@ -26,6 +26,8 @@ public class DeliveryTracking {
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
+    public DeliveryTracking() {}
+
     @PrePersist
     protected void onPersist() {
         timestamp = LocalDateTime.now();

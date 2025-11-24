@@ -24,13 +24,15 @@ public class Rating {
     private User rated;
 
     @Column(name = "rating_value", nullable = false)
-    private Integer ratingValue; // Corresponds to TINYINT
+    private Integer ratingValue;
 
     @Column(columnDefinition = "TEXT")
     private String comment;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public Rating() {}
 
     @PrePersist
     protected void onCreate() {
