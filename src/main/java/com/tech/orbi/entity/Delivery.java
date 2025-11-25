@@ -14,9 +14,12 @@ public class Delivery {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(name = "order_number")
+    private int order;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
-    private User customer;
+    @JoinColumn(name = "route_id")
+    private Route route;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_id")
@@ -27,14 +30,6 @@ public class Delivery {
     private DeliveryStatus status;
 
     // Address and coordinates
-    @Column(name = "pickup_address", columnDefinition = "TEXT")
-    private String pickupAddress;
-    @Column(name = "pickup_latitude", precision = 10, scale = 8)
-    private BigDecimal pickupLatitude;
-    @Column(name = "pickup_longitude", precision = 11, scale = 8)
-    private BigDecimal pickupLongitude;
-
-
     @Column(name = "dropoff_address", columnDefinition = "TEXT")
     private String dropoffAddress;
     @Column(name = "dropoff_latitude", precision = 10, scale = 8)
@@ -46,19 +41,14 @@ public class Delivery {
     private String recipientName;
     @Column(name = "recipient_phone")
     private String recipientPhone;
+    @Column(name = "recipient_email")
+    private String recipientEmail;
 
     // Details
     @Column(name = "package_details", columnDefinition = "TEXT")
     private String packageDetails;
-    @Column(name = "estimated_fare", precision = 10, scale = 2)
-    private BigDecimal estimatedFare;
-
-    @Column(name = "requested_at")
-    private LocalDateTime requestedAt;
 
     // Timestamps
-    @Column(name = "accepted_at")
-    private LocalDateTime acceptedAt;
     @Column(name = "picked_up_at")
     private LocalDateTime pickedUpAt;
     @Column(name = "delivered_at")
@@ -68,9 +58,11 @@ public class Delivery {
 
     @PrePersist
     protected void onCreate() {
-        requestedAt = LocalDateTime.now();
+        pickedUpAt = LocalDateTime.now();
         status = DeliveryStatus.REQUESTED;
     }
+
+    // Getters and Setters
 
     public Integer getId() {
         return id;
@@ -80,12 +72,36 @@ public class Delivery {
         this.id = id;
     }
 
-    public User getCustomer() {
-        return customer;
+    public int getOrder() {
+        return order;
     }
 
-    public void setCustomer(User customer) {
-        this.customer = customer;
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
+    public Route getRoute() {
+        return route;
+    }
+
+    public void setRoute(Route route) {
+        this.route = route;
+    }
+
+    public String getRecipientEmail() {
+        return recipientEmail;
+    }
+
+    public void setRecipientEmail(String recipientEmail) {
+        this.recipientEmail = recipientEmail;
+    }
+
+    public String getCustomer() {
+        return recipientEmail;
+    }
+
+    public void setCustomer(String customerEmail) {
+        this.recipientEmail = recipientEmail;
     }
 
     public User getDriver() {
@@ -102,30 +118,6 @@ public class Delivery {
 
     public void setStatus(DeliveryStatus status) {
         this.status = status;
-    }
-
-    public String getPickupAddress() {
-        return pickupAddress;
-    }
-
-    public void setPickupAddress(String pickupAddress) {
-        this.pickupAddress = pickupAddress;
-    }
-
-    public BigDecimal getPickupLatitude() {
-        return pickupLatitude;
-    }
-
-    public void setPickupLatitude(BigDecimal pickupLatitude) {
-        this.pickupLatitude = pickupLatitude;
-    }
-
-    public BigDecimal getPickupLongitude() {
-        return pickupLongitude;
-    }
-
-    public void setPickupLongitude(BigDecimal pickupLongitude) {
-        this.pickupLongitude = pickupLongitude;
     }
 
     public String getDropoffAddress() {
@@ -176,29 +168,7 @@ public class Delivery {
         this.packageDetails = packageDetails;
     }
 
-    public BigDecimal getEstimatedFare() {
-        return estimatedFare;
-    }
 
-    public void setEstimatedFare(BigDecimal estimatedFare) {
-        this.estimatedFare = estimatedFare;
-    }
-
-    public LocalDateTime getRequestedAt() {
-        return requestedAt;
-    }
-
-    public void setRequestedAt(LocalDateTime requestedAt) {
-        this.requestedAt = requestedAt;
-    }
-
-    public LocalDateTime getAcceptedAt() {
-        return acceptedAt;
-    }
-
-    public void setAcceptedAt(LocalDateTime acceptedAt) {
-        this.acceptedAt = acceptedAt;
-    }
 
     public LocalDateTime getPickedUpAt() {
         return pickedUpAt;

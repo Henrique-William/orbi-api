@@ -8,6 +8,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface DeliveryRepository extends JpaRepository<Delivery, Integer> {
-    List<Delivery> findByCustomerId(UUID customerId);
+    List<Delivery> findByRecipientEmail(String recipientEmail);
     List<Delivery> findByDriverIdAndStatus(UUID driverId, DeliveryStatus status);
 }
