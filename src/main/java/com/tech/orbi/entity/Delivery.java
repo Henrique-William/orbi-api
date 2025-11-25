@@ -59,7 +59,7 @@ public class Delivery {
     @PrePersist
     protected void onCreate() {
         pickedUpAt = LocalDateTime.now();
-        status = DeliveryStatus.REQUESTED;
+        status = DeliveryStatus.AT_PICKUP;
     }
 
     // Getters and Setters

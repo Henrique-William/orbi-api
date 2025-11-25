@@ -55,6 +55,7 @@ public class AuthController {
 
         user.setName(dto.name());
         user.setEmail(dto.email());
+        user.setPhone(dto.phoneNumber());
         user.setPassword(passwordEncoder.encode(dto.password()));
         user.setRoles(Set.of(basicRole));
 
