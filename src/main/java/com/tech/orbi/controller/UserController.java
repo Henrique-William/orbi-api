@@ -2,77 +2,153 @@ package com.tech.orbi.controller;
 
 import com.tech.orbi.Repository.RoleRepository;
 import com.tech.orbi.Repository.UserRepository;
-import com.tech.orbi.dto.RegisterUserDto;
-import com.tech.orbi.entity.Role;
+import com.tech.orbi.dto.UserDto;
+
+import com.tech.orbi.dto.UserUpdateDto;
+import com.tech.orbi.dto.UsersListDto;
 import com.tech.orbi.entity.User;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.util.Date;
 import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/user")
 public class UserController {
 
-    private final BCryptPasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
 
     public UserController(BCryptPasswordEncoder passwordEncoder, UserRepository userRepository, RoleRepository roleRepository) {
-        this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
     }
 
-    @Transactional
-    @PostMapping("/register")
-    public ResponseEntity<Void> register(@RequestBody RegisterUserDto dto) {
+    // Get all users
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
+    @GetMapping
+    public ResponseEntity<UsersListDto> getAllUsers(@RequestParam(value = "page", defaultValue = "0") int page,
+                                                    @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
 
-        var now = Instant.now();
-        var user = new User();
-        var basicRole = roleRepository.findByName(Role.Values.BASIC.name());
-        var userFromDb = userRepository.findByEmail(dto.email());
+        Page<User> usersPage = userRepository.findAll(
+                PageRequest.of(page, pageSize, Sort.Direction.DESC, "createdAt")
+        );
 
-        if (userFromDb.isPresent()) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY);
-        }
+        List<UserDto> userDto = usersPage.getContent().stream()
+                .map(user -> new UserDto(
+                        user.getId(),
+                        user.getName(),
+                        user.getEmail(),
+                        user.getCreatedAt(),
+                        user.getDriverProfile(),
+                        user.getVehicles(),
+                        user.getRoles()))
+                .collect(Collectors.toList());
 
-//        user.setCreatedAt(Timestamp.from(now));
-        user.setName(dto.name());
-        user.setEmail(dto.email());
-        user.setPassword(passwordEncoder.encode(dto.password()));
-        user.setRoles(Set.of(basicRole));
+        UsersListDto usersListDto = new UsersListDto(
+                userDto,
+                usersPage.getNumber(),
+                usersPage.getSize(),
+                usersPage.getTotalPages(),
+                usersPage.getTotalElements());
 
-        userRepository.save(user);
-
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(usersListDto);
 
     }
 
-    @GetMapping("/users")
-    public ResponseEntity<List<User>> listUsers(JwtAuthenticationToken token) {
+    // Get user by ID
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN') or authentication.principal.claims['sub'] == #userId.toString()")
+    @GetMapping("/{userId}")
+    public ResponseEntity<UserDto> getUserById(@PathVariable UUID userId) {
 
-        var user = userRepository.findById(UUID.fromString(token.getName()));
+        Optional<User> userOptional = userRepository.findById(userId);
 
-        var isAdmin = user.get().getRoles().stream().anyMatch(role -> role.getRoleName().equalsIgnoreCase(Role.Values.ADMIN.name()));
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            UserDto userDto = new UserDto(
+                    user.getId(),
+                    user.getName(),
+                    user.getEmail(),
+                    user.getCreatedAt(),
+                    user.getDriverProfile(),
+                    user.getVehicles(),
+                    user.getRoles()
+            );
 
-        if (isAdmin) {
-            var users = userRepository.findAll();
-            return ResponseEntity.ok(users);
+            return ResponseEntity.ok(userDto);
+
         } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
 
+            return ResponseEntity.notFound().build();
+
+        }
     }
 
+    // Update user By ID
+    @Transactional
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN') or authentication.principal.claims['sub'] == #userId.toString()")
+    @PutMapping("/{userId}")
+    public ResponseEntity<UserDto> updateUserById(@PathVariable UUID userId,
+                                                  @RequestBody UserUpdateDto userUpdateDto) {
+
+        Optional<User> userOptional = userRepository.findById(userId);
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+
+            user.setName(userUpdateDto.name() != null ? userUpdateDto.name() : user.getName());
+            user.setEmail(userUpdateDto.email() != null ? userUpdateDto.email() : user.getEmail());
+            user.setDriverProfile(userUpdateDto.driverProfile() != null ? userUpdateDto.driverProfile() : user.getDriverProfile());
+            user.setVehicles(userUpdateDto.vehicles() != null ? userUpdateDto.vehicles() : user.getVehicles());
+            user.setRoles(userUpdateDto.role() != null ? userUpdateDto.role() : user.getRoles());
+
+            User updatedUser = userRepository.save(user);
+
+            UserDto userDto = new UserDto(
+                    updatedUser.getId(),
+                    updatedUser.getName(),
+                    updatedUser.getEmail(),
+                    updatedUser.getCreatedAt(),
+                    updatedUser.getDriverProfile(),
+                    updatedUser.getVehicles(),
+                    updatedUser.getRoles()
+            );
+
+            return ResponseEntity.ok(userDto);
+
+        } else {
+
+            return ResponseEntity.notFound().build();
+
+        }
+    }
+
+    @Transactional // Importante para garantir a atomicidade da operação no banco
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN') or authentication.name == #userId.toString()")
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<Void> deleteUserById(@PathVariable UUID userId) {
+
+        var userOptional = userRepository.findById(userId);
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+
+            // Remove the link with table (tb_users_role)
+            user.getRoles().clear();
+
+            // 2. Delete the user
+            userRepository.delete(user);
+
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.notFound().build();
+    }
 }

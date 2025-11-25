@@ -47,10 +47,10 @@ public class AdminUserConfig implements CommandLineRunner {
                     var newUser = new User();
                     newUser.setName("Admin");
                     newUser.setEmail("admin");
+                    newUser.setPhone("admin");
                     newUser.setPassword(passwordEncoder.encode(adminPassword));
 
                     newUser.setRoles(Set.of(roleAdmin));
-//                    newUser.setCreatedAt(Timestamp.from(now));
                     userRepository.save(newUser);
                 }
         );

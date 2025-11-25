@@ -14,9 +14,12 @@ public class Delivery {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(name = "order_number")
+    private int order;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
-    private User customer;
+    @JoinColumn(name = "route_id")
+    private Route route;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_id")
@@ -26,58 +29,160 @@ public class Delivery {
     @Column(nullable = false)
     private DeliveryStatus status;
 
-    @Column(name = "pickup_address", columnDefinition = "TEXT", nullable = false)
-    private String pickupAddress;
-
-    @Column(name = "pickup_latitude", precision = 10, scale = 8, nullable = false)
-    private BigDecimal pickupLatitude;
-
-    @Column(name = "pickup_longitude", precision = 11, scale = 8, nullable = false)
-    private BigDecimal pickupLongitude;
-
-    @Column(name = "dropoff_address", columnDefinition = "TEXT", nullable = false)
+    // Address and coordinates
+    @Column(name = "dropoff_address", columnDefinition = "TEXT")
     private String dropoffAddress;
-
-    @Column(name = "dropoff_latitude", precision = 10, scale = 8, nullable = false)
+    @Column(name = "dropoff_latitude", precision = 10, scale = 8)
     private BigDecimal dropoffLatitude;
-
-    @Column(name = "dropoff_longitude", precision = 11, scale = 8, nullable = false)
+    @Column(name = "dropoff_longitude", precision = 11, scale = 8)
     private BigDecimal dropoffLongitude;
 
-    @Column(name = "recipient_name", nullable = false)
+    @Column(name = "recipient_name")
     private String recipientName;
-
-    @Column(name = "recipient_phone", nullable = false)
+    @Column(name = "recipient_phone")
     private String recipientPhone;
+    @Column(name = "recipient_email")
+    private String recipientEmail;
 
+    // Details
     @Column(name = "package_details", columnDefinition = "TEXT")
     private String packageDetails;
 
-    @Column(name = "estimated_fare", precision = 10, scale = 2)
-    private BigDecimal estimatedFare;
-
-    @Column(name = "requested_at")
-    private LocalDateTime requestedAt;
-
-    @Column(name = "accepted_at")
-    private LocalDateTime acceptedAt;
-
+    // Timestamps
     @Column(name = "picked_up_at")
     private LocalDateTime pickedUpAt;
-
     @Column(name = "delivered_at")
     private LocalDateTime deliveredAt;
 
-    @OneToMany(mappedBy = "delivery", cascade = CascadeType.ALL)
-    private List<DeliveryTracking> trackingPoints;
-
-    @OneToMany(mappedBy = "delivery", cascade = CascadeType.ALL)
-    private List<Rating> ratings;
+    public Delivery() {}
 
     @PrePersist
     protected void onCreate() {
-        requestedAt = LocalDateTime.now();
-        status = DeliveryStatus.REQUESTED;
+        pickedUpAt = LocalDateTime.now();
+        status = DeliveryStatus.AT_PICKUP;
     }
 
+    // Getters and Setters
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public int getOrder() {
+        return order;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
+    public Route getRoute() {
+        return route;
+    }
+
+    public void setRoute(Route route) {
+        this.route = route;
+    }
+
+    public String getRecipientEmail() {
+        return recipientEmail;
+    }
+
+    public void setRecipientEmail(String recipientEmail) {
+        this.recipientEmail = recipientEmail;
+    }
+
+    public String getCustomer() {
+        return recipientEmail;
+    }
+
+    public void setCustomer(String customerEmail) {
+        this.recipientEmail = recipientEmail;
+    }
+
+    public User getDriver() {
+        return driver;
+    }
+
+    public void setDriver(User driver) {
+        this.driver = driver;
+    }
+
+    public DeliveryStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(DeliveryStatus status) {
+        this.status = status;
+    }
+
+    public String getDropoffAddress() {
+        return dropoffAddress;
+    }
+
+    public void setDropoffAddress(String dropoffAddress) {
+        this.dropoffAddress = dropoffAddress;
+    }
+
+    public BigDecimal getDropoffLatitude() {
+        return dropoffLatitude;
+    }
+
+    public void setDropoffLatitude(BigDecimal dropoffLatitude) {
+        this.dropoffLatitude = dropoffLatitude;
+    }
+
+    public BigDecimal getDropoffLongitude() {
+        return dropoffLongitude;
+    }
+
+    public void setDropoffLongitude(BigDecimal dropoffLongitude) {
+        this.dropoffLongitude = dropoffLongitude;
+    }
+
+    public String getRecipientName() {
+        return recipientName;
+    }
+
+    public void setRecipientName(String recipientName) {
+        this.recipientName = recipientName;
+    }
+
+    public String getRecipientPhone() {
+        return recipientPhone;
+    }
+
+    public void setRecipientPhone(String recipientPhone) {
+        this.recipientPhone = recipientPhone;
+    }
+
+    public String getPackageDetails() {
+        return packageDetails;
+    }
+
+    public void setPackageDetails(String packageDetails) {
+        this.packageDetails = packageDetails;
+    }
+
+
+
+    public LocalDateTime getPickedUpAt() {
+        return pickedUpAt;
+    }
+
+    public void setPickedUpAt(LocalDateTime pickedUpAt) {
+        this.pickedUpAt = pickedUpAt;
+    }
+
+    public LocalDateTime getDeliveredAt() {
+        return deliveredAt;
+    }
+
+    public void setDeliveredAt(LocalDateTime deliveredAt) {
+        this.deliveredAt = deliveredAt;
+    }
 }
