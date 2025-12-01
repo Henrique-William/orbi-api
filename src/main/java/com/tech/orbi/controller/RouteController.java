@@ -104,7 +104,6 @@ public class RouteController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public ResponseEntity<List<RouteResponseDto>> getAllRoutes() {
         var routes = routeRepository.findAll();
 
@@ -116,7 +115,6 @@ public class RouteController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('SCOPE_ADMIN') or hasAuthority('SCOPE_BASIC')")
     public ResponseEntity<RouteResponseDto> getRouteById(@PathVariable Integer id) {
         return routeRepository.findById(id)
                 .map(route -> ResponseEntity.ok(toDto(route)))

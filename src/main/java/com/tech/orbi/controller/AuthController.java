@@ -75,7 +75,7 @@ public class AuthController {
         }
 
         var now = Instant.now();
-        var expiresIn = 300L;
+        var expiresIn = 1440L;
 
         var scopes = user.get().getRoles()
                 .stream()
@@ -93,9 +93,9 @@ public class AuthController {
         var jwtValue = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
 
         ResponseCookie cookie = ResponseCookie.from("token", jwtValue)
-                .httpOnly(true)
+                .httpOnly(true) // <- ESSENCIAL: Protege o token contra XSS
                 .secure(false)
-                .path("/") // true em produção
+                .path("/")
                 .maxAge(Duration.ofSeconds(expiresIn))
                 .sameSite("Strict")
                 .build();
