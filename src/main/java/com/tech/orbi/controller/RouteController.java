@@ -141,7 +141,8 @@ public class RouteController {
                 route.getId(),
                 route.getDriver() != null ? route.getDriver().getId() : null,
                 route.getDriver() != null ? route.getDriver().getName() : "No Driver",
-                deliveryDtos // Passa a lista convertida, que não tem o ciclo infinito
+                route.getCreatedAt(), // Adicione aqui
+                deliveryDtos
         );
     }
 
@@ -153,7 +154,8 @@ public class RouteController {
                 delivery.getStatus(),
                 delivery.getRecipientName(),
                 delivery.getDropoffAddress(),
-                delivery.getPackageDetails()
+                delivery.getPackageDetails(),
+                delivery.getDeliveredAt()
         );
     }
 

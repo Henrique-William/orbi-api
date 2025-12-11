@@ -1,6 +1,8 @@
 package com.tech.orbi.entity;
 
 import jakarta.persistence.*;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -17,6 +19,14 @@ public class Route {
 
     @OneToMany(mappedBy = "route")
     private List<Delivery> deliveries;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 
     public Route(){}
 
@@ -43,5 +53,13 @@ public class Route {
 
     public void setDeliveries(List<Delivery> deliveries) {
         this.deliveries = deliveries;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }
