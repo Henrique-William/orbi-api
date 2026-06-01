@@ -131,4 +131,4 @@ public class User {
     public boolean isLoginCorrect(LoginRequestDto loginRequestDto, PasswordEncoder passwordEncoder) {
         return passwordEncoder.matches(loginRequestDto.password(), this.password);
     }
-}
+}   
