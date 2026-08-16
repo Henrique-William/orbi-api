@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -18,6 +19,9 @@ public class DriverProfile {
     @MapsId // A PK desta tabela é também FK para User
     @JoinColumn(name = "user_id")
     private User user;
+
+    @OneToMany(mappedBy = "driverProfile", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Vehicle> vehicles;
 
     @Column(name = "license_number", nullable = false)
     private String licenseNumber;
@@ -58,6 +62,14 @@ public class DriverProfile {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public List<Vehicle> getVehicles() {
+        return vehicles;
+    }
+
+    public void setVehicles(List<Vehicle> vehicles) {
+        this.vehicles = vehicles;
     }
 
     public String getLicenseNumber() {

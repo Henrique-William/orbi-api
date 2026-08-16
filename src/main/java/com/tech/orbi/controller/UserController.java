@@ -47,8 +47,6 @@ public class UserController {
                         user.getName(),
                         user.getEmail(),
                         user.getCreatedAt(),
-                        user.getDriverProfile(),
-                        user.getVehicles(),
                         user.getRoles()))
                 .collect(Collectors.toList());
 
@@ -77,8 +75,6 @@ public class UserController {
                     user.getName(),
                     user.getEmail(),
                     user.getCreatedAt(),
-                    user.getDriverProfile(),
-                    user.getVehicles(),
                     user.getRoles()
             );
 
@@ -106,7 +102,6 @@ public class UserController {
             user.setName(userUpdateDto.name() != null ? userUpdateDto.name() : user.getName());
             user.setEmail(userUpdateDto.email() != null ? userUpdateDto.email() : user.getEmail());
             user.setDriverProfile(userUpdateDto.driverProfile() != null ? userUpdateDto.driverProfile() : user.getDriverProfile());
-            user.setVehicles(userUpdateDto.vehicles() != null ? userUpdateDto.vehicles() : user.getVehicles());
             user.setRoles(userUpdateDto.role() != null ? userUpdateDto.role() : user.getRoles());
 
             User updatedUser = userRepository.save(user);
@@ -116,8 +111,6 @@ public class UserController {
                     updatedUser.getName(),
                     updatedUser.getEmail(),
                     updatedUser.getCreatedAt(),
-                    updatedUser.getDriverProfile(),
-                    updatedUser.getVehicles(),
                     updatedUser.getRoles()
             );
 
