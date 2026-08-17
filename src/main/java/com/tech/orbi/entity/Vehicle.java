@@ -11,8 +11,8 @@ public class Vehicle {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "driver_user_id", nullable = false)
-    private User driver;
+    @JoinColumn(name = "driver_profile_user_id", nullable = false)
+    private DriverProfile driverProfile;
 
     @Column(name = "license_plate", unique = true, nullable = false)
     private String licensePlate;
@@ -36,12 +36,12 @@ public class Vehicle {
         this.id = id;
     }
 
-    public User getDriver() {
-        return driver;
+    public DriverProfile getDriverProfile() {
+        return driverProfile;
     }
 
-    public void setDriver(User driver) {
-        this.driver = driver;
+    public void setDriverProfile(DriverProfile driverProfile) {
+        this.driverProfile = driverProfile;
     }
 
     public String getLicensePlate() {

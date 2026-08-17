@@ -1,14 +1,14 @@
 package com.tech.orbi.controller;
 
 import com.tech.orbi.Repository.DeliveryRepository;
+import com.tech.orbi.Repository.DriverProfileRepository;
 import com.tech.orbi.Repository.RouteRepository;
-import com.tech.orbi.Repository.UserRepository;
 import com.tech.orbi.dto.DeliveryDto;
 import com.tech.orbi.dto.LocationDto;
 import com.tech.orbi.dto.RouteResponseDto;
 import com.tech.orbi.entity.Delivery;
+import com.tech.orbi.entity.DriverProfile;
 import com.tech.orbi.entity.Route;
-import com.tech.orbi.entity.User; // Importação da entidade User
 import com.tech.orbi.service.RouteService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional; // Importação do Optional
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -28,13 +28,13 @@ public class RouteController {
     private final RouteService routeService;
     private final RouteRepository routeRepository;
     private final DeliveryRepository deliveryRepository;
-    private final UserRepository userRepository;
+    private final DriverProfileRepository driverProfileRepository;
 
-    public RouteController(RouteService routeService, RouteRepository routeRepository, DeliveryRepository deliveryRepository, UserRepository userRepository) {
+    public RouteController(RouteService routeService, RouteRepository routeRepository, DeliveryRepository deliveryRepository, DriverProfileRepository driverProfileRepository) {
         this.routeService = routeService;
         this.routeRepository = routeRepository;
         this.deliveryRepository = deliveryRepository;
-        this.userRepository = userRepository;
+        this.driverProfileRepository = driverProfileRepository;
     }
 
     @Transactional
@@ -47,31 +47,26 @@ public class RouteController {
             return ResponseEntity.badRequest().build();
         }
 
-        // 1. Extrai o driverId do primeiro LocationDto na lista
         UUID driverIdFromRequest = locations.get(0).driverId();
 
-        // 2. Busca a entidade User (Driver) no banco de dados UMA VEZ usando o UUID
-        Optional<User> driverOptional = Optional.empty();
+        Optional<DriverProfile> driverProfileOptional = Optional.empty();
         if (driverIdFromRequest != null) {
-            driverOptional = userRepository.findById(driverIdFromRequest);
+            driverProfileOptional = driverProfileRepository.findById(driverIdFromRequest);
         }
 
-        // 3. Se o ID foi fornecido, mas o motorista não foi encontrado, retorna 404
-        if (driverIdFromRequest != null && driverOptional.isEmpty()) {
-            System.out.println("Driver com ID: " + driverIdFromRequest + " não encontrado.");
+        if (driverIdFromRequest != null && driverProfileOptional.isEmpty()) {
+            System.out.println("Driver Profile com ID: " + driverIdFromRequest + " não encontrado.");
             return ResponseEntity.notFound().build();
         }
 
-        // O objeto User (Driver) a ser atrelado
-        User driver = driverOptional.orElse(null);
+        DriverProfile driverProfile = driverProfileOptional.orElse(null);
 
         List<LocationDto> optimizedRoute = routeService.findBestRoute(locations, startIndex);
 
-        // Salvando a rota
         Route newRoute = new Route();
-         if (driver != null) {
-             newRoute.setDriver(driver);
-         }
+        if (driverProfile != null) {
+            newRoute.setDriverProfile(driverProfile);
+        }
 
         newRoute = routeRepository.save(newRoute);
 
@@ -79,7 +74,6 @@ public class RouteController {
             LocationDto location = optimizedRoute.get(i);
             Delivery delivery = new Delivery();
 
-            // Atribuições da Delivery
             delivery.setRoute(newRoute);
             delivery.setOrder(i + 1);
 
@@ -91,11 +85,6 @@ public class RouteController {
             delivery.setRecipientPhone(location.recipientPhone());
             delivery.setRecipientEmail(location.recipientEmail());
             delivery.setPackageDetails(location.packageDetails());
-
-            // 4. Atrela o objeto User (Driver) à Delivery (se encontrado)
-            if (driver != null) {
-                delivery.setDriver(driver);
-            }
 
             deliveryRepository.save(delivery);
         }
@@ -137,16 +126,20 @@ public class RouteController {
                 ? route.getDeliveries().stream().map(this::toDeliveryDto).toList()
                 : List.of();
 
+        DriverProfile driverProfile = route.getDriverProfile();
+        UUID driverId = driverProfile != null ? driverProfile.getUserId() : null;
+        String driverName = driverProfile != null && driverProfile.getUser() != null ? driverProfile.getUser().getName() : "No Driver";
+
+
         return new RouteResponseDto(
                 route.getId(),
-                route.getDriver() != null ? route.getDriver().getId() : null,
-                route.getDriver() != null ? route.getDriver().getName() : "No Driver",
-                route.getCreatedAt(), // Adicione aqui
+                driverId,
+                driverName,
+                route.getCreatedAt(),
                 deliveryDtos
         );
     }
 
-    // Metodo auxiliar para converter Delivery -> DTO
     private DeliveryDto toDeliveryDto(Delivery delivery) {
         return new DeliveryDto(
                 delivery.getId(),

@@ -5,8 +5,6 @@ import jakarta.persistence.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,9 +34,6 @@ public class User {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private DriverProfile driverProfile;
-
-    @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL)
-    private List<Vehicle> vehicles = new ArrayList<>();
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -112,14 +107,6 @@ public class User {
         this.driverProfile = driverProfile;
     }
 
-    public List<Vehicle> getVehicles() {
-        return vehicles;
-    }
-
-    public void setVehicles(List<Vehicle> vehicles) {
-        this.vehicles = vehicles;
-    }
-
     public Set<Role> getRoles() {
         return roles;
     }
@@ -131,4 +118,4 @@ public class User {
     public boolean isLoginCorrect(LoginRequestDto loginRequestDto, PasswordEncoder passwordEncoder) {
         return passwordEncoder.matches(loginRequestDto.password(), this.password);
     }
-}   
+}

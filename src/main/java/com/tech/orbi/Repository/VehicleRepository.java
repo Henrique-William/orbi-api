@@ -8,5 +8,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface VehicleRepository extends JpaRepository<Vehicle, Integer> {
-    List<Vehicle> findByDriverId(UUID driverId);
+    Optional<Vehicle> findByLicensePlate(String licensePlate);
+    List<Vehicle> findByDriverProfileUserId(UUID userId);
 }

@@ -21,10 +21,6 @@ public class Delivery {
     @JoinColumn(name = "route_id")
     private Route route;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "driver_id")
-    private User driver;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DeliveryStatus status;
@@ -102,14 +98,6 @@ public class Delivery {
 
     public void setCustomer(String customerEmail) {
         this.recipientEmail = recipientEmail;
-    }
-
-    public User getDriver() {
-        return driver;
-    }
-
-    public void setDriver(User driver) {
-        this.driver = driver;
     }
 
     public DeliveryStatus getStatus() {

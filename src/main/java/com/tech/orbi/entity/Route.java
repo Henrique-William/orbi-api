@@ -14,8 +14,8 @@ public class Route {
     private Integer id;
 
     @ManyToOne
-    @JoinColumn(name = "driver_id")
-    private User driver;
+    @JoinColumn(name = "driver_profile_id")
+    private DriverProfile driverProfile;
 
     @OneToMany(mappedBy = "route")
     private List<Delivery> deliveries;
@@ -39,12 +39,12 @@ public class Route {
         this.id = id;
     }
 
-    public User getDriver() {
-        return driver;
+    public DriverProfile getDriverProfile() {
+        return driverProfile;
     }
 
-    public void setDriver(User driver) {
-        this.driver = driver;
+    public void setDriverProfile(DriverProfile driverProfile) {
+        this.driverProfile = driverProfile;
     }
 
     public List<Delivery> getDeliveries() {

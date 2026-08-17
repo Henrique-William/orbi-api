@@ -1,11 +1,9 @@
 package com.tech.orbi.Repository;
 
-import com.tech.orbi.entity.ApprovalStatus;
 import com.tech.orbi.entity.DriverProfile;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
+import java.util.UUID;
 
-public interface DriverProfileRepository extends JpaRepository<DriverProfile, Integer> {
-    List<DriverProfile> findByApprovalStatus(ApprovalStatus status);
+public interface DriverProfileRepository extends JpaRepository<DriverProfile, UUID> {
 }
