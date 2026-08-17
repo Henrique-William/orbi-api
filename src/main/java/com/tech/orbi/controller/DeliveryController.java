@@ -79,18 +79,16 @@ public class DeliveryController {
     }
 
     private void validateDriverOwnership(Delivery delivery, Authentication authentication) {
-        // Se for ADMIN, passa direto
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("SCOPE_ADMIN"));
 
         if (isAdmin) return;
 
-        // Pega o UUID do usuário logado através do Token JWT
         Jwt jwt = (Jwt) authentication.getPrincipal();
         UUID userIdFromToken = UUID.fromString(jwt.getSubject());
 
-        // Verifica se a entrega tem motorista e se o motorista é o usuário logado
-        if (delivery.getDriver() == null || !delivery.getDriver().getId().equals(userIdFromToken)) {
+        var route = delivery.getRoute();
+        if (route == null || route.getDriverProfile() == null || !route.getDriverProfile().getUserId().equals(userIdFromToken)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não tem permissão para alterar esta entrega.");
         }
     }
