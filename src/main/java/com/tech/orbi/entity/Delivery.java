@@ -1,48 +1,45 @@
 package com.tech.orbi.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "tb_deliveries")
 public class Delivery {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @Column(name = "order_number")
     private int order;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "route_id")
-    private Route route;
+    // Address and coordinates
+    @Column(name = "address", columnDefinition = "TEXT")
+    private String address;
+    @Column(name = "latitude", precision = 10, scale = 8)
+    private BigDecimal latitude;
+    @Column(name = "longitude", precision = 11, scale = 8)
+    private BigDecimal longitude;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DeliveryStatus status;
 
-    // Address and coordinates
-    @Column(name = "dropoff_address", columnDefinition = "TEXT")
-    private String dropoffAddress;
-    @Column(name = "dropoff_latitude", precision = 10, scale = 8)
-    private BigDecimal dropoffLatitude;
-    @Column(name = "dropoff_longitude", precision = 11, scale = 8)
-    private BigDecimal dropoffLongitude;
-
-    @Column(name = "recipient_name")
-    private String recipientName;
-    @Column(name = "recipient_phone")
-    private String recipientPhone;
-    @Column(name = "recipient_email")
-    private String recipientEmail;
-
-    // Details
-    @Column(name = "package_details", columnDefinition = "TEXT")
-    private String packageDetails;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "route_id")
+    private Route route;
 
     // Timestamps
     @Column(name = "picked_up_at")
@@ -50,7 +47,6 @@ public class Delivery {
     @Column(name = "delivered_at")
     private LocalDateTime deliveredAt;
 
-    public Delivery() {}
 
     @PrePersist
     protected void onCreate() {
@@ -58,119 +54,4 @@ public class Delivery {
         status = DeliveryStatus.AT_PICKUP;
     }
 
-    // Getters and Setters
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public int getOrder() {
-        return order;
-    }
-
-    public void setOrder(int order) {
-        this.order = order;
-    }
-
-    public Route getRoute() {
-        return route;
-    }
-
-    public void setRoute(Route route) {
-        this.route = route;
-    }
-
-    public String getRecipientEmail() {
-        return recipientEmail;
-    }
-
-    public void setRecipientEmail(String recipientEmail) {
-        this.recipientEmail = recipientEmail;
-    }
-
-    public String getCustomer() {
-        return recipientEmail;
-    }
-
-    public void setCustomer(String customerEmail) {
-        this.recipientEmail = recipientEmail;
-    }
-
-    public DeliveryStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(DeliveryStatus status) {
-        this.status = status;
-    }
-
-    public String getDropoffAddress() {
-        return dropoffAddress;
-    }
-
-    public void setDropoffAddress(String dropoffAddress) {
-        this.dropoffAddress = dropoffAddress;
-    }
-
-    public BigDecimal getDropoffLatitude() {
-        return dropoffLatitude;
-    }
-
-    public void setDropoffLatitude(BigDecimal dropoffLatitude) {
-        this.dropoffLatitude = dropoffLatitude;
-    }
-
-    public BigDecimal getDropoffLongitude() {
-        return dropoffLongitude;
-    }
-
-    public void setDropoffLongitude(BigDecimal dropoffLongitude) {
-        this.dropoffLongitude = dropoffLongitude;
-    }
-
-    public String getRecipientName() {
-        return recipientName;
-    }
-
-    public void setRecipientName(String recipientName) {
-        this.recipientName = recipientName;
-    }
-
-    public String getRecipientPhone() {
-        return recipientPhone;
-    }
-
-    public void setRecipientPhone(String recipientPhone) {
-        this.recipientPhone = recipientPhone;
-    }
-
-    public String getPackageDetails() {
-        return packageDetails;
-    }
-
-    public void setPackageDetails(String packageDetails) {
-        this.packageDetails = packageDetails;
-    }
-
-
-
-    public LocalDateTime getPickedUpAt() {
-        return pickedUpAt;
-    }
-
-    public void setPickedUpAt(LocalDateTime pickedUpAt) {
-        this.pickedUpAt = pickedUpAt;
-    }
-
-    public LocalDateTime getDeliveredAt() {
-        return deliveredAt;
-    }
-
-    public void setDeliveredAt(LocalDateTime deliveredAt) {
-        this.deliveredAt = deliveredAt;
-    }
 }

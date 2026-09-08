@@ -1,25 +1,22 @@
 package com.tech.orbi.controller;
 
-import com.tech.orbi.Repository.DriverProfileRepository;
+import com.tech.orbi.Repository.DriverRepository;
 import com.tech.orbi.Repository.RoleRepository;
 import com.tech.orbi.Repository.UserRepository;
 import com.tech.orbi.dto.*;
-import com.tech.orbi.entity.ApprovalStatus;
-import com.tech.orbi.entity.DriverProfile;
+import com.tech.orbi.entity.Driver;
+import com.tech.orbi.entity.Role;
 import com.tech.orbi.entity.User;
-import com.tech.orbi.entity.Vehicle;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -28,11 +25,13 @@ import java.util.stream.Collectors;
 public class UserController {
 
     private final UserRepository userRepository;
-    private final DriverProfileRepository driverProfileRepository;
+    private final DriverRepository driverRepository;
+    private final RoleRepository roleRepository;
 
-    public UserController(UserRepository userRepository, DriverProfileRepository driverProfileRepository) {
+    public UserController(UserRepository userRepository, DriverRepository driverRepository,  RoleRepository roleRepository) {
         this.userRepository = userRepository;
-        this.driverProfileRepository = driverProfileRepository;
+        this.driverRepository = driverRepository;
+        this.roleRepository = roleRepository;
     }
 
     @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
@@ -51,8 +50,7 @@ public class UserController {
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponseDto> getUserById(@PathVariable UUID userId) {
         return userRepository.findById(userId)
-                .map(this::convertToUserResponseDto)
-                .map(ResponseEntity::ok)
+                .map(user -> ResponseEntity.ok(user))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -65,7 +63,7 @@ public class UserController {
             user.setEmail(userUpdateDto.email() != null ? userUpdateDto.email() : user.getEmail());
             user.setRoles(userUpdateDto.role() != null ? userUpdateDto.role() : user.getRoles());
             User updatedUser = userRepository.save(user);
-            return ResponseEntity.ok(convertToUserResponseDto(updatedUser));
+            return ResponseEntity.ok((updatedUser));
         }).orElse(ResponseEntity.notFound().build());
     }
 
@@ -82,58 +80,34 @@ public class UserController {
 
     @Transactional
     @PostMapping("/{userId}/driver-profile")
-    public ResponseEntity<DriverProfileDto> createDriverProfile(@PathVariable UUID userId, @RequestBody CreateDriverProfileDto dto) {
-        return userRepository.findById(userId).map(user -> {
-            if (user.getDriverProfile() != null) {
-                return ResponseEntity.badRequest().<DriverProfileDto>build();
-            }
-            DriverProfile driverProfile = new DriverProfile();
-            driverProfile.setUser(user);
-            driverProfile.setLicenseNumber(dto.licenseNumber());
-            driverProfile.setApprovalStatus(ApprovalStatus.PENDING);
-            user.setDriverProfile(driverProfile);
-            User savedUser = userRepository.save(user);
-            return ResponseEntity.ok(convertToDriverProfileDto(savedUser.getDriverProfile()));
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<DriverProfileDto> createDriverProfile(@RequestBody CreateDriverDto driverDto) {
+        Driver driver = new Driver();
+        var driverRole = roleRepository.findByName(Role.Values.DRIVER.name());
+
+        driver.setCnh(driverDto.licenseNumber());
+        driver.setRoles(Set.of(driverRole));
+
+        driverRepository.save(driver);
+        return ResponseEntity.ok().build();
+
     }
 
     @GetMapping("/{userId}/driver-profile")
     public ResponseEntity<DriverProfileDto> getDriverProfile(@PathVariable UUID userId) {
-        return userRepository.findById(userId)
-                .map(User::getDriverProfile)
-                .map(this::convertToDriverProfileDto)
-                .map(ResponseEntity::ok)
+        return driverRepository.findById(userId)
+                .map(driver -> ResponseEntity.ok())
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @Transactional
     @DeleteMapping("/{userId}/driver-profile")
     @PreAuthorize("hasAuthority('SCOPE_ADMIN') or authentication.name == #userId.toString()")
-    public ResponseEntity<Void> deleteDriverProfile(@PathVariable UUID userId) {
-        return userRepository.findById(userId).map(user -> {
-            DriverProfile driverProfile = user.getDriverProfile();
-            if (driverProfile != null) {
-                user.setDriverProfile(null);
-                driverProfileRepository.delete(driverProfile);
-                return ResponseEntity.noContent().<Void>build();
-            }
-            return ResponseEntity.notFound().<Void>build();
-        }).orElse(ResponseEntity.notFound().build());
-    }
+    public ResponseEntity<Void> deleteDriverProfile(@PathVariable UUID driverId) {
 
-    private UserResponseDto convertToUserResponseDto(User user) {
-        DriverProfileDto driverProfileDto = user.getDriverProfile() != null ? convertToDriverProfileDto(user.getDriverProfile()) : null;
-        return new UserResponseDto(user.getId(), user.getName(), user.getEmail(), user.getPhone(), user.getCreatedAt(), driverProfileDto);
-    }
+        if (!driverRepository.existsById(driverId)) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.noContent().build();
 
-    private DriverProfileDto convertToDriverProfileDto(DriverProfile driverProfile) {
-        List<VehicleDto> vehicleDtos = driverProfile.getVehicles() != null
-                ? driverProfile.getVehicles().stream().map(this::convertToVehicleDto).collect(Collectors.toList())
-                : Collections.emptyList();
-        return new DriverProfileDto(driverProfile.getUserId(), driverProfile.getLicenseNumber(), driverProfile.getApprovalStatus(), driverProfile.isActive(), driverProfile.getAverageRating(), driverProfile.getProfileCreatedAt(), vehicleDtos);
-    }
-
-    private VehicleDto convertToVehicleDto(Vehicle vehicle) {
-        return new VehicleDto(vehicle.getId(), vehicle.getLicensePlate(), vehicle.getBrand(), vehicle.getModel(), vehicle.getColor(), vehicle.getYear(), vehicle.isDefault());
     }
 }

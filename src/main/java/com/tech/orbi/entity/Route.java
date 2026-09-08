@@ -1,24 +1,46 @@
 package com.tech.orbi.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "tb_routes")
 public class Route {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "driver_profile_id")
-    private DriverProfile driverProfile;
+    @JoinColumn(name = "assigned_driver_id")
+    private Driver assignedDriver;
 
     @OneToMany(mappedBy = "route")
     private List<Delivery> deliveries;
+
+    @Column(name = "total_distance")
+    private double totalDistance;
+
+    @Column(name = "total_cost")
+    private double totalCost;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User genereatedBy;
+
+    @Column(name = "created_by")
+    private User createdBy;
+
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -28,38 +50,4 @@ public class Route {
         createdAt = LocalDateTime.now();
     }
 
-    public Route(){}
-
-    // Getters and Setters
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public DriverProfile getDriverProfile() {
-        return driverProfile;
-    }
-
-    public void setDriverProfile(DriverProfile driverProfile) {
-        this.driverProfile = driverProfile;
-    }
-
-    public List<Delivery> getDeliveries() {
-        return deliveries;
-    }
-
-    public void setDeliveries(List<Delivery> deliveries) {
-        this.deliveries = deliveries;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
 }

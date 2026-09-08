@@ -8,7 +8,6 @@ public record UserResponseDto(
         String name,
         String email,
         String phone,
-        LocalDateTime createdAt,
-        DriverProfileDto driverProfile
+        LocalDateTime createdAt
 ) {
 }

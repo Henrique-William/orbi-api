@@ -1,13 +1,13 @@
 package com.tech.orbi.controller;
 
 import com.tech.orbi.Repository.DeliveryRepository;
-import com.tech.orbi.Repository.DriverProfileRepository;
+import com.tech.orbi.Repository.DriverRepository;
 import com.tech.orbi.Repository.RouteRepository;
 import com.tech.orbi.dto.DeliveryDto;
 import com.tech.orbi.dto.LocationDto;
 import com.tech.orbi.dto.RouteResponseDto;
 import com.tech.orbi.entity.Delivery;
-import com.tech.orbi.entity.DriverProfile;
+import com.tech.orbi.entity.Driver;
 import com.tech.orbi.entity.Route;
 import com.tech.orbi.service.RouteService;
 import org.springframework.http.ResponseEntity;
@@ -28,13 +28,13 @@ public class RouteController {
     private final RouteService routeService;
     private final RouteRepository routeRepository;
     private final DeliveryRepository deliveryRepository;
-    private final DriverProfileRepository driverProfileRepository;
+    private final DriverRepository driverRepository;
 
-    public RouteController(RouteService routeService, RouteRepository routeRepository, DeliveryRepository deliveryRepository, DriverProfileRepository driverProfileRepository) {
+    public RouteController(RouteService routeService, RouteRepository routeRepository, DeliveryRepository deliveryRepository, DriverRepository driverRepository) {
         this.routeService = routeService;
         this.routeRepository = routeRepository;
         this.deliveryRepository = deliveryRepository;
-        this.driverProfileRepository = driverProfileRepository;
+        this.driverRepository = driverRepository;
     }
 
     @Transactional
@@ -49,9 +49,9 @@ public class RouteController {
 
         UUID driverIdFromRequest = locations.get(0).driverId();
 
-        Optional<DriverProfile> driverProfileOptional = Optional.empty();
+        Optional<Driver> driverProfileOptional = Optional.empty();
         if (driverIdFromRequest != null) {
-            driverProfileOptional = driverProfileRepository.findById(driverIdFromRequest);
+            driverProfileOptional = driverRepository.findById(driverIdFromRequest);
         }
 
         if (driverIdFromRequest != null && driverProfileOptional.isEmpty()) {
@@ -59,13 +59,13 @@ public class RouteController {
             return ResponseEntity.notFound().build();
         }
 
-        DriverProfile driverProfile = driverProfileOptional.orElse(null);
+        Driver driver = driverProfileOptional.orElse(null);
 
         List<LocationDto> optimizedRoute = routeService.findBestRoute(locations, startIndex);
 
         Route newRoute = new Route();
-        if (driverProfile != null) {
-            newRoute.setDriverProfile(driverProfile);
+        if (driver != null) {
+            newRoute.setAssignedDriver(driver);
         }
 
         newRoute = routeRepository.save(newRoute);
@@ -77,14 +77,9 @@ public class RouteController {
             delivery.setRoute(newRoute);
             delivery.setOrder(i + 1);
 
-            delivery.setDropoffAddress(location.address());
-            delivery.setDropoffLatitude(BigDecimal.valueOf(location.latitude()));
-            delivery.setDropoffLongitude(BigDecimal.valueOf(location.longitude()));
-
-            delivery.setRecipientName(location.recipientName());
-            delivery.setRecipientPhone(location.recipientPhone());
-            delivery.setRecipientEmail(location.recipientEmail());
-            delivery.setPackageDetails(location.packageDetails());
+            delivery.setAddress(location.address());
+            delivery.setLatitude(BigDecimal.valueOf(location.latitude()));
+            delivery.setLongitude(BigDecimal.valueOf(location.longitude()));
 
             deliveryRepository.save(delivery);
         }
@@ -126,9 +121,9 @@ public class RouteController {
                 ? route.getDeliveries().stream().map(this::toDeliveryDto).toList()
                 : List.of();
 
-        DriverProfile driverProfile = route.getDriverProfile();
-        UUID driverId = driverProfile != null ? driverProfile.getUserId() : null;
-        String driverName = driverProfile != null && driverProfile.getUser() != null ? driverProfile.getUser().getName() : "No Driver";
+        Driver driver = route.getAssignedDriver();
+        UUID driverId = driver != null ? driver.getUserId() : null;
+        String driverName = driver.getDriverName();
 
 
         return new RouteResponseDto(
@@ -145,9 +140,7 @@ public class RouteController {
                 delivery.getId(),
                 delivery.getOrder(),
                 delivery.getStatus(),
-                delivery.getRecipientName(),
-                delivery.getDropoffAddress(),
-                delivery.getPackageDetails(),
+                delivery.getAddress(),
                 delivery.getDeliveredAt()
         );
     }
