@@ -30,7 +30,10 @@ public class RouteController {
     private final DeliveryRepository deliveryRepository;
     private final DriverRepository driverRepository;
 
-    public RouteController(RouteService routeService, RouteRepository routeRepository, DeliveryRepository deliveryRepository, DriverRepository driverRepository) {
+    public RouteController(RouteService routeService,
+                           RouteRepository routeRepository,
+                           DeliveryRepository deliveryRepository,
+                           DriverRepository driverRepository) {
         this.routeService = routeService;
         this.routeRepository = routeRepository;
         this.deliveryRepository = deliveryRepository;
@@ -47,20 +50,18 @@ public class RouteController {
             return ResponseEntity.badRequest().build();
         }
 
-        UUID driverIdFromRequest = locations.get(0).driverId();
-
+        UUID driverIdFromRequest = locations.getFirst().driverId();
         Optional<Driver> driverProfileOptional = Optional.empty();
+
         if (driverIdFromRequest != null) {
             driverProfileOptional = driverRepository.findById(driverIdFromRequest);
         }
 
         if (driverIdFromRequest != null && driverProfileOptional.isEmpty()) {
-            System.out.println("Driver Profile com ID: " + driverIdFromRequest + " não encontrado.");
             return ResponseEntity.notFound().build();
         }
 
         Driver driver = driverProfileOptional.orElse(null);
-
         List<LocationDto> optimizedRoute = routeService.findBestRoute(locations, startIndex);
 
         Route newRoute = new Route();
@@ -73,14 +74,11 @@ public class RouteController {
         for (int i = 0; i < optimizedRoute.size(); i++) {
             LocationDto location = optimizedRoute.get(i);
             Delivery delivery = new Delivery();
-
             delivery.setRoute(newRoute);
             delivery.setOrder(i + 1);
-
             delivery.setAddress(location.address());
             delivery.setLatitude(BigDecimal.valueOf(location.latitude()));
             delivery.setLongitude(BigDecimal.valueOf(location.longitude()));
-
             deliveryRepository.save(delivery);
         }
 
@@ -90,11 +88,9 @@ public class RouteController {
     @GetMapping
     public ResponseEntity<List<RouteResponseDto>> getAllRoutes() {
         var routes = routeRepository.findAll();
-
         var response = routes.stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
-
         return ResponseEntity.ok(response);
     }
 
@@ -116,22 +112,26 @@ public class RouteController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * CORREÇÃO: Mapeia corretamente as entidades seguindo as posições exatas e os tipos
+     * exigidos no construtor do record RouteResponseDto. Além disso, previne o NullPointerException
+     * checando se o motorista (Driver) é nulo antes de buscar o seu nome.
+     */
     private RouteResponseDto toDto(Route route) {
         List<DeliveryDto> deliveryDtos = route.getDeliveries() != null
                 ? route.getDeliveries().stream().map(this::toDeliveryDto).toList()
                 : List.of();
 
         Driver driver = route.getAssignedDriver();
-        UUID driverId = driver != null ? driver.getUserId() : null;
-        String driverName = driver.getDriverName();
-
+        String driverName = driver != null ? driver.getDriverName() : null;
 
         return new RouteResponseDto(
                 route.getId(),
-                driverId,
-                driverName,
-                route.getCreatedAt(),
-                deliveryDtos
+                driver,                    // 2º parâmetro (Driver driverId)
+                route.getGenereatedBy(),   // 3º parâmetro (User generatedById - usando a grafia da classe Route)
+                driverName,                // 4º parâmetro (String driverName)
+                route.getCreatedAt(),      // 5º parâmetro (LocalDateTime createdAt)
+                deliveryDtos               // 6º parâmetro (List<DeliveryDto> deliveries)
         );
     }
 
@@ -144,5 +144,4 @@ public class RouteController {
                 delivery.getDeliveredAt()
         );
     }
-
 }
