@@ -8,7 +8,6 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Getter
 @Setter
@@ -46,6 +45,9 @@ public class Delivery {
     private LocalDateTime pickedUpAt;
     @Column(name = "delivered_at")
     private LocalDateTime deliveredAt;
+
+    @Column(name = "recipient_email")
+    private String recipientEmail;
 
 
     @PrePersist

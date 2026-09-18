@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -82,10 +81,6 @@ public class UserController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * CORREÇÃO: Recebe corretamente o PathVariable userId, busca o usuário correspondente,
-     * e vincula as informações necessárias de identificação no perfil do motorista de forma atômica.
-     */
     @Transactional
     @PostMapping("/{userId}/driver-profile")
     public ResponseEntity<Void> createDriverProfile(@PathVariable UUID userId, @RequestBody CreateDriverDto driverDto) {
@@ -94,24 +89,22 @@ public class UserController {
             driver.setUserId(userId);
             driver.setDriverName(user.getName());
             driver.setPhone(user.getPhone());
-            driver.setCnh(driverDto.licenseNumber());
+            driver.setCnh(driverDto.cnh());
 
             var driverRole = roleRepository.findByName(Role.Values.DRIVER.name());
-            driver.setRoles(Set.of(driverRole));
-            driverRepository.save(driver);
 
-            // Adiciona a role de motorista para o usuário também
-            user.getRoles().add(driverRole);
-            userRepository.save(user);
+            if (driverRole != null) {
+                user.getRoles().clear();
+                user.getRoles().add(driverRole);
+                userRepository.save(user);
+            }
+
+            driverRepository.save(driver);
 
             return ResponseEntity.ok().<Void>build();
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * CORREÇÃO: Resolve o erro de compilação do BodyBuilder incompleto ResponseEntity.ok(),
-     * retornando corretamente o DriverDto composto por User e dados do perfil do motorista.
-     */
     @GetMapping("/{userId}/driver-profile")
     public ResponseEntity<DriverDto> getDriverProfile(@PathVariable UUID userId) {
         return driverRepository.findById(userId)
@@ -124,10 +117,6 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * CORREÇÃO: Corrige o parâmetro PathVariable para bater exatamente com "{userId}"
-     * e implementa a exclusão física do perfil do motorista no repositório.
-     */
     @Transactional
     @DeleteMapping("/{userId}/driver-profile")
     @PreAuthorize("hasAuthority('SCOPE_ADMIN') or authentication.name == #userId.toString()")

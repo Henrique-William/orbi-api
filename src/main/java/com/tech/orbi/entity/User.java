@@ -2,7 +2,6 @@ package com.tech.orbi.entity;
 
 import com.tech.orbi.dto.LoginRequestDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,7 +28,6 @@ public class User {
     @Column(name = "full_name", nullable = false)
     private String name;
 
-    @Email
     @Column(unique = true, nullable = false)
     private String email;
 
@@ -41,6 +39,10 @@ public class User {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
+    private Company company;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

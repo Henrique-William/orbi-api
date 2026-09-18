@@ -23,7 +23,7 @@ public class Route {
 
     @ManyToOne
     @JoinColumn(name = "assigned_driver_id")
-    private Driver assignedDriver;
+    private Driver driver;
 
     @OneToMany(mappedBy = "route")
     private List<Delivery> deliveries;
@@ -37,10 +37,6 @@ public class Route {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User genereatedBy;
-
-    @Column(name = "created_by")
-    private User createdBy;
-
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

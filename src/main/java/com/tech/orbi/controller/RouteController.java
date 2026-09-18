@@ -66,7 +66,7 @@ public class RouteController {
 
         Route newRoute = new Route();
         if (driver != null) {
-            newRoute.setAssignedDriver(driver);
+            newRoute.setDriver(driver);
         }
 
         newRoute = routeRepository.save(newRoute);
@@ -108,21 +108,19 @@ public class RouteController {
         if (!routeRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
+
+        deliveryRepository.deleteByRouteId(id);
         routeRepository.deleteById(id);
+
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * CORREÇÃO: Mapeia corretamente as entidades seguindo as posições exatas e os tipos
-     * exigidos no construtor do record RouteResponseDto. Além disso, previne o NullPointerException
-     * checando se o motorista (Driver) é nulo antes de buscar o seu nome.
-     */
     private RouteResponseDto toDto(Route route) {
         List<DeliveryDto> deliveryDtos = route.getDeliveries() != null
                 ? route.getDeliveries().stream().map(this::toDeliveryDto).toList()
                 : List.of();
 
-        Driver driver = route.getAssignedDriver();
+        Driver driver = route.getDriver();
         String driverName = driver != null ? driver.getDriverName() : null;
 
         return new RouteResponseDto(
