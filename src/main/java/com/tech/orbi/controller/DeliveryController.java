@@ -88,7 +88,7 @@ public class DeliveryController {
         UUID userIdFromToken = UUID.fromString(jwt.getSubject());
 
         var route = delivery.getRoute();
-        if (route == null || route.getDriverProfile() == null || !route.getDriverProfile().getUserId().equals(userIdFromToken)) {
+        if (route == null || route.getDriver() == null || !route.getDriver().getUserId().equals(userIdFromToken)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não tem permissão para alterar esta entrega.");
         }
     }
