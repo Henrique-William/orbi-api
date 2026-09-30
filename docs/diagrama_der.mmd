@@ -1,0 +1,86 @@
+erDiagram
+    COMPANY {
+        bigint id PK
+        varchar name "NOT NULL"
+        varchar cnpj "NOT NULL, UNIQUE"
+    }
+
+    ROLE {
+        bigint role_id PK
+        varchar name "ADMIN | BASIC | DRIVER"
+    }
+
+    USER {
+        uuid user_id PK
+        varchar full_name "NOT NULL"
+        varchar email "NOT NULL, UNIQUE"
+        varchar phone "UNIQUE"
+        varchar password_hash "NOT NULL"
+        timestamp created_at
+        bigint company_id FK
+    }
+
+    USERS_ROLE {
+        uuid user_id FK "PK composta"
+        bigint role_id FK "PK composta"
+    }
+
+    DRIVER_PROFILE {
+        uuid driver_id PK
+        varchar driver_name
+        varchar driver_cnh "NOT NULL"
+        varchar driver_phone
+        timestamp profile_created_at
+    }
+
+    ROUTE {
+        bigint id PK
+        double total_distance
+        double total_cost
+        varchar status "PENDING | ASSIGNED | IN_PROGRESS | COMPLETED | CANCELLED"
+        timestamp created_at
+        uuid user_id FK
+        uuid assigned_driver_id FK
+    }
+
+    DELIVERY {
+        bigint id PK
+        int order_number
+        text address
+        decimal latitude "precision 10-8"
+        decimal longitude "precision 11-8"
+        varchar status "REQUESTED | ACCEPTED | AT_PICKUP | IN_TRANSIT | DELIVERED | CANCELLED"
+        timestamp picked_up_at
+        timestamp delivered_at
+        varchar recipient_email
+        bigint route_id FK
+    }
+
+    PACKAGE {
+        bigint id PK
+        varchar description
+        double weight
+        bigint delivery_id FK
+    }
+
+    RATING {
+        integer id PK
+        integer rating_value "1 a 5"
+        text comment
+        timestamp created_at
+        bigint delivery_id FK
+        uuid rater_user_id FK
+        uuid rated_user_id FK
+    }
+
+    COMPANY ||--o{ USER : "possui"
+    ROLE ||--o{ USERS_ROLE : "define"
+    USER ||--o{ USERS_ROLE : "possui"
+    DRIVER_PROFILE ||--o{ USERS_ROLE : "possui"
+    USER ||--o{ ROUTE : "gera"
+    DRIVER_PROFILE ||--o{ ROUTE : "executa"
+    ROUTE ||--|{ DELIVERY : "contem"
+    DELIVERY ||--o{ PACKAGE : "contem"
+    DELIVERY ||--o{ RATING : "recebe"
+    USER ||--o{ RATING : "avalia (rater)"
+    USER ||--o{ RATING : "avaliado (rated)"

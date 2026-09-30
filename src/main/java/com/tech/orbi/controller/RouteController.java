@@ -6,9 +6,7 @@ import com.tech.orbi.Repository.RouteRepository;
 import com.tech.orbi.dto.DeliveryDto;
 import com.tech.orbi.dto.LocationDto;
 import com.tech.orbi.dto.RouteResponseDto;
-import com.tech.orbi.entity.Delivery;
-import com.tech.orbi.entity.Driver;
-import com.tech.orbi.entity.Route;
+import com.tech.orbi.entity.*;
 import com.tech.orbi.service.RouteService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -67,6 +65,9 @@ public class RouteController {
         Route newRoute = new Route();
         if (driver != null) {
             newRoute.setDriver(driver);
+            newRoute.setStatus(RouteStatus.ASSIGNED);
+        } else {
+            newRoute.setStatus(RouteStatus.PENDING);
         }
 
         newRoute = routeRepository.save(newRoute);
@@ -95,7 +96,7 @@ public class RouteController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<RouteResponseDto> getRouteById(@PathVariable Integer id) {
+    public ResponseEntity<RouteResponseDto> getRouteById(@PathVariable Long id) {
         return routeRepository.findById(id)
                 .map(route -> ResponseEntity.ok(toDto(route)))
                 .orElse(ResponseEntity.notFound().build());
@@ -104,7 +105,7 @@ public class RouteController {
     @Transactional
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
-    public ResponseEntity<Void> deleteRoute(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteRoute(@PathVariable Long id) {
         if (!routeRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -125,11 +126,14 @@ public class RouteController {
 
         return new RouteResponseDto(
                 route.getId(),
-                driver,                    // 2º parâmetro (Driver driverId)
-                route.getGenereatedBy(),   // 3º parâmetro (User generatedById - usando a grafia da classe Route)
-                driverName,                // 4º parâmetro (String driverName)
-                route.getCreatedAt(),      // 5º parâmetro (LocalDateTime createdAt)
-                deliveryDtos               // 6º parâmetro (List<DeliveryDto> deliveries)
+                driver,
+                route.getGeneratedBy(),
+                driverName,
+                route.getStatus(),
+                route.getTotalDistance(),
+                route.getTotalCost(),
+                route.getCreatedAt(),
+                deliveryDtos
         );
     }
 

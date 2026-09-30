@@ -1,0 +1,113 @@
+---
+config:
+  layout: elk
+---
+classDiagram
+direction TB
+    class Company {
+        -Long id
+        -String name
+        -String cnpj
+        -List~User~ users
+    }
+
+    class Role {
+        -Long roleId
+        -String name
+        +enum Values ADMIN BASIC DRIVER
+    }
+
+    class User {
+        -UUID id
+        -String name
+        -String email
+        -String phone
+        -String password
+        -LocalDateTime createdAt
+        -Company company
+        -Set~Role~ roles
+        +isLoginCorrect(LoginRequestDto, PasswordEncoder) boolean
+    }
+
+    class Driver {
+        -UUID userId
+        -String driverName
+        -String cnh
+        -String phone
+        -LocalDateTime profileCreatedAt
+        -Set~Role~ roles
+    }
+
+    class RouteStatus {
+        <<enumeration>>
+        PENDING
+        ASSIGNED
+        IN_PROGRESS
+        COMPLETED
+        CANCELLED
+    }
+
+    class Route {
+        -Long id
+        -Driver driver
+        -List~Delivery~ deliveries
+        -double totalDistance
+        -double totalCost
+        -RouteStatus status
+        -User generatedBy
+        -LocalDateTime createdAt
+    }
+
+    class DeliveryStatus {
+        <<enumeration>>
+        REQUESTED
+        ACCEPTED
+        AT_PICKUP
+        IN_TRANSIT
+        DELIVERED
+        CANCELLED
+    }
+
+    class Delivery {
+        -Long id
+        -int order
+        -String address
+        -BigDecimal latitude
+        -BigDecimal longitude
+        -DeliveryStatus status
+        -Route route
+        -LocalDateTime pickedUpAt
+        -LocalDateTime deliveredAt
+        -String recipientEmail
+    }
+
+    class Package {
+        -Long id
+        -String description
+        -Double weight
+        -Delivery delivery
+        +verifyWeightLimit(Double maxWeight) boolean
+    }
+
+    class Rating {
+        -Integer id
+        -Delivery delivery
+        -User rater
+        -User rated
+        -Integer ratingValue
+        -String comment
+        -LocalDateTime createdAt
+    }
+
+    Company "1" -- "*" User : possui
+    User "*" -- "*" Role : possui
+    Driver "*" -- "*" Role : possui
+    User "1" -- "*" Route : gera
+    Driver "1" -- "*" Route : executa
+    Route --> RouteStatus
+    Route "1" -- "*" Delivery : contém
+    Delivery --> DeliveryStatus
+    Delivery "1" -- "*" Package : inclui
+    Delivery "1" -- "0..1" Rating : recebe
+    Rating --> User : rater
+    Rating --> User : rated

@@ -10,11 +10,11 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.UUID;
 
-public interface DeliveryRepository extends JpaRepository<Delivery, Integer> {
+public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
 
     @Modifying
     @Query("DELETE FROM Delivery d WHERE d.route.id = :routeId")
-    void deleteByRouteId(@Param("routeId") Integer routeId);
+    void deleteByRouteId(@Param("routeId") Long routeId);
 
     @Query("SELECT d FROM Delivery d WHERE d.route.driver.userId = :driverId AND d.status = :status")
     List<Delivery> findByDriverIdAndStatus(UUID driverId, DeliveryStatus status);

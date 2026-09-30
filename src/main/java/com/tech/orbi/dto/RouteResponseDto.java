@@ -1,6 +1,7 @@
 package com.tech.orbi.dto;
 
 import com.tech.orbi.entity.Driver;
+import com.tech.orbi.entity.RouteStatus;
 import com.tech.orbi.entity.User;
 
 import java.time.LocalDateTime;
@@ -11,6 +12,9 @@ public record RouteResponseDto(
         Driver driverId,
         User generatedById,
         String driverName,
-        LocalDateTime createdAt, // Novo campo
+        RouteStatus status,
+        double totalDistance,
+        double totalCost,
+        LocalDateTime createdAt,
         List<DeliveryDto> deliveries
 ) {}

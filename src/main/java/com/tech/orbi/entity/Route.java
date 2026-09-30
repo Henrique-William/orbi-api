@@ -34,9 +34,13 @@ public class Route {
     @Column(name = "total_cost")
     private double totalCost;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private RouteStatus status;
+
     @ManyToOne
     @JoinColumn(name = "user_id")
-    private User genereatedBy;
+    private User generatedBy;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -44,6 +48,8 @@ public class Route {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        if (status == null) {
+            status = RouteStatus.PENDING;
+        }
     }
-
 }
