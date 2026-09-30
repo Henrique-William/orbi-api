@@ -11,8 +11,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 
-import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.Set;
 
 @Configuration
@@ -36,7 +34,6 @@ public class AdminUserConfig implements CommandLineRunner {
     @Transactional
     public void run(String... args) throws Exception {
 
-        var now = Instant.now();
         var roleAdmin = roleRepository.findByName(Role.Values.ADMIN.name());
 
         // Step 1: Find or create the admin user.

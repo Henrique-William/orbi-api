@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "tb_deliveries")
@@ -89,14 +88,6 @@ public class Delivery {
     }
 
     public void setRecipientEmail(String recipientEmail) {
-        this.recipientEmail = recipientEmail;
-    }
-
-    public String getCustomer() {
-        return recipientEmail;
-    }
-
-    public void setCustomer(String customerEmail) {
         this.recipientEmail = recipientEmail;
     }
 

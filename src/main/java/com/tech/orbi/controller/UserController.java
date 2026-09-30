@@ -1,7 +1,6 @@
 package com.tech.orbi.controller;
 
 import com.tech.orbi.Repository.DriverProfileRepository;
-import com.tech.orbi.Repository.RoleRepository;
 import com.tech.orbi.Repository.UserRepository;
 import com.tech.orbi.dto.*;
 import com.tech.orbi.entity.ApprovalStatus;
@@ -13,13 +12,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 

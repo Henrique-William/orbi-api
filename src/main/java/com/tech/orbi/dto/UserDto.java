@@ -1,11 +1,8 @@
 package com.tech.orbi.dto;
 
-import com.tech.orbi.entity.DriverProfile;
 import com.tech.orbi.entity.Role;
-import com.tech.orbi.entity.Vehicle;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 

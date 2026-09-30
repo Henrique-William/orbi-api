@@ -5,6 +5,7 @@ import com.tech.orbi.Repository.DriverProfileRepository;
 import com.tech.orbi.Repository.RouteRepository;
 import com.tech.orbi.dto.DeliveryDto;
 import com.tech.orbi.dto.LocationDto;
+import com.tech.orbi.dto.RouteDirectionsDto;
 import com.tech.orbi.dto.RouteResponseDto;
 import com.tech.orbi.entity.Delivery;
 import com.tech.orbi.entity.DriverProfile;
@@ -108,6 +109,11 @@ public class RouteController {
         return routeRepository.findById(id)
                 .map(route -> ResponseEntity.ok(toDto(route)))
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/directions")
+    public ResponseEntity<RouteDirectionsDto> getRouteDirections(@PathVariable Integer id) {
+        return ResponseEntity.ok(routeService.getDirections(id));
     }
 
     @Transactional
