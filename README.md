@@ -6,7 +6,7 @@ A **Orbi API** é uma solução de back-end robusta desenvolvida com **Spring Bo
 
 ## 🛠 Tecnologias e Ferramentas
 
-* **Linguagem:** Java 17+
+* **Linguagem:** Java 21+
 * **Framework Principal:** Spring Boot (Web, Data JPA, Security)
 * **Banco de Dados:** H2 / MySQL (configurado via propriedades da aplicação)
 * **Segurança:** Spring Security (com criptografia e controle de acesso)
@@ -22,7 +22,7 @@ A aplicação adota o padrão de **Arquitetura em Camadas (Layered Architecture)
 * **Service:** Centraliza as regras de negócio e validações do sistema (como a lógica estruturada em `RouteService`).
 * **Repository:** Interfaces que estendem o Spring Data JPA para realizar a comunicação direta e segura com o banco de dados (`DeliveryRepository`, `UserRepository`, etc.).
 * **DTO (Data Transfer Object):** Padrão utilizado para transacionar dados entre as camadas sem expor diretamente as entidades do banco (`DeliveryDto`, `RouteResponseDto`, etc.).
-* **Entity:** Modelagem do domínio do sistema refletida em tabelas relacionais (`User`, `Route`, `Delivery`, `Vehicle`, `Package`)[.
+* **Entity:** Modelagem do domínio do sistema refletida em tabelas relacionais (`User`, `Route`, `Delivery`, `Vehicle`).
 * **Config/Security:** Centralização das políticas de segurança e configurações globais do ecossistema (`SecurityConfig`, `AdminUserConfig`).
 
 ---
@@ -30,7 +30,7 @@ A aplicação adota o padrão de **Arquitetura em Camadas (Layered Architecture)
 ## 🔑 Funcionalidades Principais
 
 * **Autenticação e Autorização:** Fluxo completo de login, registro de usuários e controle de permissões baseado em papéis (`Roles`).
-* **Gestão de Rotas:** Endpoints focados no mapeamento e rastreamento de trajetos (`RouteController`)[.
+* **Gestão de Rotas:** Endpoints focados no mapeamento e rastreamento de trajetos (`RouteController`).
 * **Controle de Entregas:** Monitoramento do ciclo de vida dos pacotes, vinculando motoristas, veículos e atualizando status em tempo real.
 * **Avaliações (Rating):** Sistema integrado para que usuários avaliem os serviços de entrega.
 
