@@ -2,7 +2,6 @@ package com.tech.orbi.controller;
 
 import com.tech.orbi.Repository.DriverRepository;
 import com.tech.orbi.Repository.RoleRepository;
-import com.tech.orbi.Repository.DriverProfileRepository;
 import com.tech.orbi.Repository.UserRepository;
 import com.tech.orbi.dto.*;
 import com.tech.orbi.entity.Driver;

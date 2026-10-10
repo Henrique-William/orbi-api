@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 public record RouteDirectionsDto(
-        Integer routeId,
+        Long routeId,
         double distanceMeters,
         double durationSeconds,
         Geometry geometry,

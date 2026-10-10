@@ -62,13 +62,13 @@ public class RouteService {
     }
 
     @Transactional(readOnly = true)
-    public RouteDirectionsDto getDirections(Integer routeId) {
+    public RouteDirectionsDto getDirections(Long routeId) {
         Route route = routeRepository.findById(routeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rota não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Route not found"));
 
         List<Delivery> deliveries = route.getDeliveries();
         if (deliveries == null || deliveries.size() < 2) {
-            throw new IllegalStateException("A rota deve possuir pelo menos duas entregas para calcular as direções.");
+            throw new IllegalStateException("The route should have at least two deliveries");
         }
 
         List<Point> points = deliveries.stream()
@@ -175,14 +175,14 @@ public class RouteService {
         if (delivery == null) {
             throw new IllegalStateException("A rota contém uma entrega nula.");
         }
-        BigDecimal latitude = delivery.getDropoffLatitude();
-        BigDecimal longitude = delivery.getDropoffLongitude();
+        BigDecimal latitude = delivery.getLatitude();
+        BigDecimal longitude = delivery.getLongitude();
         if (latitude == null || longitude == null) {
             throw new IllegalStateException("A rota contém uma entrega sem coordenadas.");
         }
 
         Point point = new Point(latitude.doubleValue(), longitude.doubleValue());
-        validateCoordinate(point.latitude(), point.longitude(), delivery.getDropoffAddress());
+        validateCoordinate(point.latitude(), point.longitude(), delivery.getAddress());
         return point;
     }
 

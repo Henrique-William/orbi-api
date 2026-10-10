@@ -104,7 +104,7 @@ public class RouteController {
     }
 
     @GetMapping("/{id}/directions")
-    public ResponseEntity<RouteDirectionsDto> getRouteDirections(@PathVariable Integer id) {
+    public ResponseEntity<RouteDirectionsDto> getRouteDirections(@PathVariable Long id) {
         return ResponseEntity.ok(routeService.getDirections(id));
     }
 
