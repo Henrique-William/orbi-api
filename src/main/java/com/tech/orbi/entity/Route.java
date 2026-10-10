@@ -1,24 +1,46 @@
 package com.tech.orbi.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "tb_routes")
 public class Route {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "driver_profile_id")
-    private DriverProfile driverProfile;
+    @JoinColumn(name = "assigned_driver_id")
+    private Driver driver;
 
     @OneToMany(mappedBy = "route")
     private List<Delivery> deliveries;
+
+    @Column(name = "total_distance")
+    private double totalDistance;
+
+    @Column(name = "total_cost")
+    private double totalCost;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private RouteStatus status;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User generatedBy;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -26,40 +48,8 @@ public class Route {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-    }
-
-    public Route(){}
-
-    // Getters and Setters
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public DriverProfile getDriverProfile() {
-        return driverProfile;
-    }
-
-    public void setDriverProfile(DriverProfile driverProfile) {
-        this.driverProfile = driverProfile;
-    }
-
-    public List<Delivery> getDeliveries() {
-        return deliveries;
-    }
-
-    public void setDeliveries(List<Delivery> deliveries) {
-        this.deliveries = deliveries;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
+        if (status == null) {
+            status = RouteStatus.PENDING;
+        }
     }
 }

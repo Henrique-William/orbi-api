@@ -28,12 +28,12 @@ public class DeliveryController {
     @PatchMapping("/{id}/next-status")
     @Transactional
     @PreAuthorize("hasAuthority('SCOPE_BASIC') or hasAuthority('SCOPE_ADMIN')")
-    public ResponseEntity<Void> nextStatus(@PathVariable Integer id, Authentication authentication) {
+    public ResponseEntity<Void> nextStatus(@PathVariable Long id, Authentication authentication) {
 
         var delivery = deliveryRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entrega não encontrada"));
 
-        // 2. Validação de segurança: O motorista é dono da entrega?
+        // Validação de segurança: O motorista é dono da entrega?
         validateDriverOwnership(delivery, authentication);
 
         switch (delivery.getStatus()) {
@@ -60,7 +60,7 @@ public class DeliveryController {
     @PatchMapping("/{id}/cancel")
     @Transactional
     @PreAuthorize("hasAuthority('SCOPE_BASIC') or hasAuthority('SCOPE_ADMIN')")
-    public ResponseEntity<Void> cancelDelivery(@PathVariable Integer id, Authentication authentication) {
+    public ResponseEntity<Void> cancelDelivery(@PathVariable Long id, Authentication authentication) {
 
         var delivery = deliveryRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entrega não encontrada"));
@@ -88,7 +88,7 @@ public class DeliveryController {
         UUID userIdFromToken = UUID.fromString(jwt.getSubject());
 
         var route = delivery.getRoute();
-        if (route == null || route.getDriverProfile() == null || !route.getDriverProfile().getUserId().equals(userIdFromToken)) {
+        if (route == null || route.getDriver() == null || !route.getDriver().getUserId().equals(userIdFromToken)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não tem permissão para alterar esta entrega.");
         }
     }

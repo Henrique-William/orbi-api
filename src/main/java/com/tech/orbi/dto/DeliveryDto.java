@@ -5,11 +5,9 @@ import com.tech.orbi.entity.DeliveryStatus;
 import java.time.LocalDateTime;
 
 public record DeliveryDto(
-        Integer id,
+        Long id,
         int order,
         DeliveryStatus status,
-        String recipientName,
-        String dropoffAddress,
-        String packageDetails,
+        String address,
         LocalDateTime deliveredAt
 ) {}

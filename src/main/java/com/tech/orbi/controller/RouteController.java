@@ -1,15 +1,13 @@
 package com.tech.orbi.controller;
 
 import com.tech.orbi.Repository.DeliveryRepository;
-import com.tech.orbi.Repository.DriverProfileRepository;
+import com.tech.orbi.Repository.DriverRepository;
 import com.tech.orbi.Repository.RouteRepository;
 import com.tech.orbi.dto.DeliveryDto;
 import com.tech.orbi.dto.LocationDto;
 import com.tech.orbi.dto.RouteDirectionsDto;
 import com.tech.orbi.dto.RouteResponseDto;
-import com.tech.orbi.entity.Delivery;
-import com.tech.orbi.entity.DriverProfile;
-import com.tech.orbi.entity.Route;
+import com.tech.orbi.entity.*;
 import com.tech.orbi.service.RouteService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,13 +27,16 @@ public class RouteController {
     private final RouteService routeService;
     private final RouteRepository routeRepository;
     private final DeliveryRepository deliveryRepository;
-    private final DriverProfileRepository driverProfileRepository;
+    private final DriverRepository driverRepository;
 
-    public RouteController(RouteService routeService, RouteRepository routeRepository, DeliveryRepository deliveryRepository, DriverProfileRepository driverProfileRepository) {
+    public RouteController(RouteService routeService,
+                           RouteRepository routeRepository,
+                           DeliveryRepository deliveryRepository,
+                           DriverRepository driverRepository) {
         this.routeService = routeService;
         this.routeRepository = routeRepository;
         this.deliveryRepository = deliveryRepository;
-        this.driverProfileRepository = driverProfileRepository;
+        this.driverRepository = driverRepository;
     }
 
     @Transactional
@@ -48,25 +49,26 @@ public class RouteController {
             return ResponseEntity.badRequest().build();
         }
 
-        UUID driverIdFromRequest = locations.get(0).driverId();
+        UUID driverIdFromRequest = locations.getFirst().driverId();
+        Optional<Driver> driverProfileOptional = Optional.empty();
 
-        Optional<DriverProfile> driverProfileOptional = Optional.empty();
         if (driverIdFromRequest != null) {
-            driverProfileOptional = driverProfileRepository.findById(driverIdFromRequest);
+            driverProfileOptional = driverRepository.findById(driverIdFromRequest);
         }
 
         if (driverIdFromRequest != null && driverProfileOptional.isEmpty()) {
-            System.out.println("Driver Profile com ID: " + driverIdFromRequest + " não encontrado.");
             return ResponseEntity.notFound().build();
         }
 
-        DriverProfile driverProfile = driverProfileOptional.orElse(null);
-
+        Driver driver = driverProfileOptional.orElse(null);
         List<LocationDto> optimizedRoute = routeService.findBestRoute(locations, startIndex);
 
         Route newRoute = new Route();
-        if (driverProfile != null) {
-            newRoute.setDriverProfile(driverProfile);
+        if (driver != null) {
+            newRoute.setDriver(driver);
+            newRoute.setStatus(RouteStatus.ASSIGNED);
+        } else {
+            newRoute.setStatus(RouteStatus.PENDING);
         }
 
         newRoute = routeRepository.save(newRoute);
@@ -74,19 +76,11 @@ public class RouteController {
         for (int i = 0; i < optimizedRoute.size(); i++) {
             LocationDto location = optimizedRoute.get(i);
             Delivery delivery = new Delivery();
-
             delivery.setRoute(newRoute);
             delivery.setOrder(i + 1);
-
-            delivery.setDropoffAddress(location.address());
-            delivery.setDropoffLatitude(BigDecimal.valueOf(location.latitude()));
-            delivery.setDropoffLongitude(BigDecimal.valueOf(location.longitude()));
-
-            delivery.setRecipientName(location.recipientName());
-            delivery.setRecipientPhone(location.recipientPhone());
-            delivery.setRecipientEmail(location.recipientEmail());
-            delivery.setPackageDetails(location.packageDetails());
-
+            delivery.setAddress(location.address());
+            delivery.setLatitude(BigDecimal.valueOf(location.latitude()));
+            delivery.setLongitude(BigDecimal.valueOf(location.longitude()));
             deliveryRepository.save(delivery);
         }
 
@@ -96,16 +90,14 @@ public class RouteController {
     @GetMapping
     public ResponseEntity<List<RouteResponseDto>> getAllRoutes() {
         var routes = routeRepository.findAll();
-
         var response = routes.stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
-
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<RouteResponseDto> getRouteById(@PathVariable Integer id) {
+    public ResponseEntity<RouteResponseDto> getRouteById(@PathVariable Long id) {
         return routeRepository.findById(id)
                 .map(route -> ResponseEntity.ok(toDto(route)))
                 .orElse(ResponseEntity.notFound().build());
@@ -119,11 +111,14 @@ public class RouteController {
     @Transactional
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
-    public ResponseEntity<Void> deleteRoute(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteRoute(@PathVariable Long id) {
         if (!routeRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
+
+        deliveryRepository.deleteByRouteId(id);
         routeRepository.deleteById(id);
+
         return ResponseEntity.noContent().build();
     }
 
@@ -132,15 +127,17 @@ public class RouteController {
                 ? route.getDeliveries().stream().map(this::toDeliveryDto).toList()
                 : List.of();
 
-        DriverProfile driverProfile = route.getDriverProfile();
-        UUID driverId = driverProfile != null ? driverProfile.getUserId() : null;
-        String driverName = driverProfile != null && driverProfile.getUser() != null ? driverProfile.getUser().getName() : "No Driver";
-
+        Driver driver = route.getDriver();
+        String driverName = driver != null ? driver.getDriverName() : null;
 
         return new RouteResponseDto(
                 route.getId(),
-                driverId,
+                driver,
+                route.getGeneratedBy(),
                 driverName,
+                route.getStatus(),
+                route.getTotalDistance(),
+                route.getTotalCost(),
                 route.getCreatedAt(),
                 deliveryDtos
         );
@@ -151,9 +148,7 @@ public class RouteController {
                 delivery.getId(),
                 delivery.getOrder(),
                 delivery.getStatus(),
-                delivery.getRecipientName(),
-                delivery.getDropoffAddress(),
-                delivery.getPackageDetails(),
+                delivery.getAddress(),
                 delivery.getDeliveredAt()
         );
     }

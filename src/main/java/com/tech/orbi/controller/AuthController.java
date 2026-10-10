@@ -33,7 +33,11 @@ public class AuthController {
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtDecoder jwtDecoder;
 
-    public AuthController(UserRepository userRepository, RoleRepository roleRepository, JwtEncoder jwtEncoder, BCryptPasswordEncoder passwordEncoder, JwtDecoder jwtDecoder) {
+    public AuthController(UserRepository userRepository,
+                          RoleRepository roleRepository,
+                          JwtEncoder jwtEncoder,
+                          BCryptPasswordEncoder passwordEncoder,
+                          JwtDecoder jwtDecoder) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.jwtEncoder = jwtEncoder;
@@ -44,7 +48,6 @@ public class AuthController {
     @Transactional
     @PostMapping("/register")
     public ResponseEntity<Void> register(@RequestBody RegisterUserDto dto) {
-
         var user = new User();
         var basicRole = roleRepository.findByName(Role.Values.BASIC.name());
         var userFromDb = userRepository.findByEmail(dto.email());
@@ -60,14 +63,11 @@ public class AuthController {
         user.setRoles(Set.of(basicRole));
 
         userRepository.save(user);
-
         return ResponseEntity.ok().build();
-
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto loginRequestDto, HttpServletResponse response) {
-
         var user = userRepository.findByEmail(loginRequestDto.email());
 
         if (user.isEmpty() || !user.get().isLoginCorrect(loginRequestDto, passwordEncoder)) {
@@ -77,9 +77,10 @@ public class AuthController {
         var now = Instant.now();
         var expiresIn = 1440L;
 
+        // CORREÇÃO: Utiliza o metodo getName() gerado pelo Lombok no atributo "name" da entidade Role
         var scopes = user.get().getRoles()
                 .stream()
-                .map(Role::getRoleName)
+                .map(Role::getName)
                 .collect(Collectors.joining(" "));
 
         var claims = JwtClaimsSet.builder()
@@ -93,8 +94,8 @@ public class AuthController {
         var jwtValue = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
 
         ResponseCookie cookie = ResponseCookie.from("token", jwtValue)
-                .httpOnly(true) // <- ESSENCIAL: Protege o token contra XSS
-                .secure(false)
+                .httpOnly(true)
+                .secure(false) // Mude para true em ambiente de produção com HTTPS
                 .path("/")
                 .maxAge(Duration.ofSeconds(expiresIn))
                 .sameSite("Strict")
@@ -107,15 +108,12 @@ public class AuthController {
 
     @GetMapping("/validate")
     public ResponseEntity<Void> validateToken(HttpServletRequest request) {
-
         Cookie[] cookies = request.getCookies();
-
         if (cookies == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         String token = null;
-
         for (Cookie cookie : cookies) {
             if ("token".equals(cookie.getName())) {
                 token = cookie.getValue();
@@ -129,17 +127,12 @@ public class AuthController {
 
         try {
             Jwt jwt = jwtDecoder.decode(token);
-
-            if (jwt.getExpiresAt().isBefore(Instant.now())) {
+            if (jwt.getExpiresAt() != null && jwt.getExpiresAt().isBefore(Instant.now())) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
-
             return ResponseEntity.ok().build();
-
-        } catch (JwtException e){
+        } catch (JwtException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-
     }
-
 }
