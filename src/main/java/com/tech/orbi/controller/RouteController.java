@@ -287,6 +287,20 @@ public class RouteController {
         return ResponseEntity.ok(routeService.getDirections(id));
     }
 
+    @GetMapping("/{id}/deliveries")
+    public ResponseEntity<List<DeliveryDto>> getRouteDeliveries(@PathVariable Long id) {
+        if (!routeRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var deliveries = deliveryRepository.findByRouteId(id);
+        var response = deliveries.stream()
+                .map(this::toDeliveryDto)
+                .toList();
+
+        return ResponseEntity.ok(response);
+    }
+
     @Transactional
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
@@ -343,6 +357,9 @@ public class RouteController {
                 delivery.getOrder(),
                 delivery.getStatus(),
                 delivery.getAddress(),
+                delivery.getLatitude(),
+                delivery.getLongitude(),
+                delivery.getRecipientEmail(),
                 delivery.getPickedUpAt(),
                 delivery.getDeliveredAt()
         );

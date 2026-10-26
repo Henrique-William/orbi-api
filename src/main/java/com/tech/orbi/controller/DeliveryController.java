@@ -2,6 +2,7 @@ package com.tech.orbi.controller;
 
 import com.tech.orbi.Repository.DeliveryRepository;
 import com.tech.orbi.Repository.RouteRepository;
+import com.tech.orbi.dto.DeliveryDto;
 import com.tech.orbi.entity.Delivery;
 import com.tech.orbi.entity.DeliveryStatus;
 import com.tech.orbi.entity.Route;
@@ -138,5 +139,33 @@ public class DeliveryController {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não tem permissão para alterar esta entrega.");
             }
         }
+    }
+
+    @GetMapping("/route/{routeId}")
+    public ResponseEntity<List<DeliveryDto>> getDeliveriesByRouteId(@PathVariable Long routeId) {
+        if (!routeRepository.existsById(routeId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var deliveries = deliveryRepository.findByRouteId(routeId);
+        var response = deliveries.stream()
+                .map(this::toDeliveryDto)
+                .toList();
+
+        return ResponseEntity.ok(response);
+    }
+
+    private DeliveryDto toDeliveryDto(Delivery delivery) {
+        return new DeliveryDto(
+                delivery.getId(),
+                delivery.getOrder(),
+                delivery.getStatus(),
+                delivery.getAddress(),
+                delivery.getLatitude(),
+                delivery.getLongitude(),
+                delivery.getRecipientEmail(),
+                delivery.getPickedUpAt(),
+                delivery.getDeliveredAt()
+        );
     }
 }

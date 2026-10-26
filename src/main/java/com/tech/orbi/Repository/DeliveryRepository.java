@@ -16,7 +16,7 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     @Query("DELETE FROM Delivery d WHERE d.route.id = :routeId")
     void deleteByRouteId(@Param("routeId") Long routeId);
 
-    @Query("SELECT d FROM Delivery d WHERE d.route.id = :routeId")
+    @Query("SELECT d FROM Delivery d WHERE d.route.id = :routeId ORDER BY d.order ASC")
     List<Delivery> findByRouteId(@Param("routeId") Long routeId);
 
     @Query("SELECT d FROM Delivery d WHERE d.route.driver.userId = :driverId AND d.status = :status")

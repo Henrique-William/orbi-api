@@ -289,4 +289,35 @@ class RouteControllerTest {
         assertEquals(10L, response.getBody().id());
         assertEquals(5, response.getBody().totalStops());
     }
+
+    @Test
+    void testGetRouteDeliveriesSuccess() {
+        Delivery d1 = new Delivery();
+        d1.setId(101L);
+        d1.setOrder(1);
+        d1.setAddress("Rua Teste, 100");
+        d1.setStatus(DeliveryStatus.TO_BE_DELIVERED);
+
+        when(routeRepository.existsById(10L)).thenReturn(true);
+        when(deliveryRepository.findByRouteId(10L)).thenReturn(List.of(d1));
+
+        ResponseEntity<List<LocationDto>> responsePlaceholder; // check return type
+        var response = routeController.getRouteDeliveries(10L);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        assertEquals(101L, response.getBody().get(0).id());
+        assertEquals(1, response.getBody().get(0).order());
+        assertEquals("Rua Teste, 100", response.getBody().get(0).address());
+    }
+
+    @Test
+    void testGetRouteDeliveriesNotFound() {
+        when(routeRepository.existsById(999L)).thenReturn(false);
+
+        var response = routeController.getRouteDeliveries(999L);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
 }

@@ -234,4 +234,27 @@ class DeliveryControllerTest {
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
+
+    @Test
+    void testGetDeliveriesByRouteIdSuccess() {
+        when(routeRepository.existsById(10L)).thenReturn(true);
+        when(deliveryRepository.findByRouteId(10L)).thenReturn(List.of(delivery));
+
+        ResponseEntity<List<com.tech.orbi.dto.DeliveryDto>> response = deliveryController.getDeliveriesByRouteId(10L);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        assertEquals(1L, response.getBody().get(0).id());
+        assertEquals(DeliveryStatus.TO_BE_DELIVERED, response.getBody().get(0).status());
+    }
+
+    @Test
+    void testGetDeliveriesByRouteIdNotFound() {
+        when(routeRepository.existsById(999L)).thenReturn(false);
+
+        ResponseEntity<List<com.tech.orbi.dto.DeliveryDto>> response = deliveryController.getDeliveriesByRouteId(999L);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
 }
