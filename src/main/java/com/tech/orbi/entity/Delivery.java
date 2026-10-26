@@ -8,7 +8,6 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Getter
 @Setter
@@ -50,11 +49,11 @@ public class Delivery {
     @Column(name = "recipient_email")
     private String recipientEmail;
 
-
     @PrePersist
     protected void onCreate() {
-        pickedUpAt = LocalDateTime.now();
-        status = DeliveryStatus.AT_PICKUP;
+        if (status == null) {
+            status = DeliveryStatus.TO_BE_DELIVERED;
+        }
     }
 
 }

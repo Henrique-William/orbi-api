@@ -9,5 +9,6 @@ public record DeliveryDto(
         int order,
         DeliveryStatus status,
         String address,
+        LocalDateTime pickedUpAt,
         LocalDateTime deliveredAt
 ) {}

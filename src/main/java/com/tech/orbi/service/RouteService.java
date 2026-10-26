@@ -1,5 +1,6 @@
 package com.tech.orbi.service;
 
+import com.tech.orbi.Repository.DeliveryRepository;
 import com.tech.orbi.Repository.RouteRepository;
 import com.tech.orbi.dto.LocationDto;
 import com.tech.orbi.dto.RouteDirectionsDto;
@@ -23,15 +24,30 @@ public class RouteService {
 
     private final OpenRouteServiceClient orsClient;
     private final RouteRepository routeRepository;
+    private final DeliveryRepository deliveryRepository;
     private final boolean surfaceWeightEnabled;
 
     public RouteService(
             OpenRouteServiceClient orsClient,
             RouteRepository routeRepository,
+            DeliveryRepository deliveryRepository,
             @Value("${orbi.route.surface-weight-enabled:true}") boolean surfaceWeightEnabled) {
         this.orsClient = orsClient;
         this.routeRepository = routeRepository;
+        this.deliveryRepository = deliveryRepository;
         this.surfaceWeightEnabled = surfaceWeightEnabled;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Route saveOptimizedRoute(Route route, List<Delivery> deliveries) {
+        Route savedRoute = routeRepository.save(route);
+        if (deliveries != null && !deliveries.isEmpty()) {
+            for (Delivery delivery : deliveries) {
+                delivery.setRoute(savedRoute);
+            }
+            deliveryRepository.saveAll(deliveries);
+        }
+        return savedRoute;
     }
 
     public List<LocationDto> findBestRoute(List<LocationDto> locations, int startIndex) {

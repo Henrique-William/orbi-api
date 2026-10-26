@@ -34,22 +34,31 @@ public class Route {
     @Column(name = "total_cost")
     private double totalCost;
 
+    @Column(name = "total_stops")
+    private Integer totalStops;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private RouteStatus status;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User generatedBy;
+    @JoinColumn(name = "created_by")
+    private User createdBy;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "assigned_at")
+    private LocalDateTime assignedAt;
+
+    @Column(name = "finalized_at")
+    private LocalDateTime finalizedAt;
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         if (status == null) {
-            status = RouteStatus.PENDING;
+            status = RouteStatus.CREATED;
         }
     }
 }

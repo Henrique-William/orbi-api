@@ -32,7 +32,7 @@ direction TB
     class Driver {
         -UUID userId
         -String driverName
-        -String cnh
+        -String cnh [unique]
         -String phone
         -LocalDateTime profileCreatedAt
         -Set~Role~ roles
@@ -40,7 +40,7 @@ direction TB
 
     class RouteStatus {
         <<enumeration>>
-        PENDING
+        CREATED
         ASSIGNED
         IN_PROGRESS
         COMPLETED
@@ -53,17 +53,19 @@ direction TB
         -List~Delivery~ deliveries
         -double totalDistance
         -double totalCost
+        -Integer totalStops
         -RouteStatus status
-        -User generatedBy
+        -User createdBy
         -LocalDateTime createdAt
+        -LocalDateTime assignedAt
+        -LocalDateTime finalizedAt
     }
 
     class DeliveryStatus {
         <<enumeration>>
-        REQUESTED
-        ACCEPTED
-        AT_PICKUP
+        TO_BE_DELIVERED
         IN_TRANSIT
+        OUT_FOR_DELIVERY
         DELIVERED
         CANCELLED
     }

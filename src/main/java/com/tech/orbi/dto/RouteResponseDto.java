@@ -2,19 +2,20 @@ package com.tech.orbi.dto;
 
 import com.tech.orbi.entity.Driver;
 import com.tech.orbi.entity.RouteStatus;
-import com.tech.orbi.entity.User;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.UUID;
 
 public record RouteResponseDto(
         Long id,
         Driver driverId,
-        User generatedById,
+        UUID createdBy,
         String driverName,
         RouteStatus status,
         double totalDistance,
         double totalCost,
+        Integer totalStops,
         LocalDateTime createdAt,
-        List<DeliveryDto> deliveries
+        LocalDateTime assignedAt,
+        LocalDateTime finalizedAt
 ) {}

@@ -6,9 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,7 +25,7 @@ public class Driver {
     @Column(name = "driver_name")
     private String driverName;
 
-    @Column(name = "driver_cnh", nullable = false)
+    @Column(name = "driver_cnh", nullable = false, unique = true)
     private String cnh;
 
     @Column(name = "driver_phone")
@@ -48,5 +46,4 @@ public class Driver {
     protected void onCreate() {
         profileCreatedAt = LocalDateTime.now();
     }
-
 }

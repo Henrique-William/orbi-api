@@ -10,10 +10,12 @@ import com.tech.orbi.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -84,6 +86,10 @@ public class UserController {
     @Transactional
     @PostMapping("/{userId}/driver-profile")
     public ResponseEntity<Void> createDriverProfile(@PathVariable UUID userId, @RequestBody CreateDriverDto driverDto) {
+        if (driverRepository.existsByCnh(driverDto.cnh())) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CNH já cadastrada no sistema.");
+        }
+
         return userRepository.findById(userId).map(user -> {
             Driver driver = new Driver();
             driver.setUserId(userId);
