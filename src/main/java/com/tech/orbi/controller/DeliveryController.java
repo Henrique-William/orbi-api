@@ -2,6 +2,7 @@ package com.tech.orbi.controller;
 
 import com.tech.orbi.Repository.DeliveryRepository;
 import com.tech.orbi.Repository.RouteRepository;
+import com.tech.orbi.dto.DeliveryDetailsDto;
 import com.tech.orbi.dto.DeliveryDto;
 import com.tech.orbi.entity.Delivery;
 import com.tech.orbi.entity.DeliveryStatus;
@@ -59,7 +60,7 @@ public class DeliveryController {
                 delivery.setStatus(DeliveryStatus.DELIVERED);
                 delivery.setDeliveredAt(LocalDateTime.now());
             }
-            case DELIVERED, CANCELLED ->
+            case DELIVERED, CANCELLED, SKIPPED ->
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A entrega já foi finalizada.");
             default ->
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Transição de status inválida.");
@@ -72,10 +73,45 @@ public class DeliveryController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{id}/delivered")
+    @Transactional
+    @PreAuthorize("hasAuthority('SCOPE_DRIVER') or hasAuthority('SCOPE_ADMIN') or hasAuthority('SCOPE_BASIC')")
+    public ResponseEntity<Void> deliverStop(@PathVariable Long id, Authentication authentication) {
+
+        var delivery = deliveryRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entrega não encontrada"));
+
+        validateDriverOwnership(delivery, authentication);
+
+        if (delivery.getRoute() == null || delivery.getRoute().getDriver() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível avançar o status da entrega pois a rota não possui motorista atribuído.");
+        }
+
+        if (delivery.getStatus() == DeliveryStatus.DELIVERED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A entrega já foi finalizada.");
+        }
+
+        if (delivery.getStatus() == DeliveryStatus.CANCELLED || delivery.getStatus() == DeliveryStatus.SKIPPED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível concluir uma entrega cancelada ou pulada.");
+        }
+
+        delivery.setStatus(DeliveryStatus.DELIVERED);
+        delivery.setDeliveredAt(LocalDateTime.now());
+        deliveryRepository.save(delivery);
+
+        updateRouteStatusOnDeliveryChange(delivery.getRoute());
+
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{id}/cancel")
     @Transactional
     @PreAuthorize("hasAuthority('SCOPE_DRIVER') or hasAuthority('SCOPE_ADMIN') or hasAuthority('SCOPE_BASIC')")
-    public ResponseEntity<Void> cancelDelivery(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<Void> cancelDelivery(
+            @PathVariable Long id,
+            @RequestBody(required = false) DeliveryDetailsDto body,
+            Authentication authentication
+    ) {
 
         var delivery = deliveryRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entrega não encontrada"));
@@ -92,6 +128,43 @@ public class DeliveryController {
         }
 
         delivery.setStatus(DeliveryStatus.CANCELLED);
+        if (body != null && body.details() != null && !body.details().isBlank()) {
+            delivery.setDetails(body.details().trim());
+        }
+        deliveryRepository.save(delivery);
+
+        updateRouteStatusOnDeliveryChange(delivery.getRoute());
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/skip")
+    @Transactional
+    @PreAuthorize("hasAuthority('SCOPE_DRIVER') or hasAuthority('SCOPE_ADMIN') or hasAuthority('SCOPE_BASIC')")
+    public ResponseEntity<Void> skipDelivery(
+            @PathVariable Long id,
+            @RequestBody(required = false) DeliveryDetailsDto body,
+            Authentication authentication
+    ) {
+
+        var delivery = deliveryRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entrega não encontrada"));
+
+        // Validação de segurança
+        validateDriverOwnership(delivery, authentication);
+
+        if (delivery.getStatus() == DeliveryStatus.DELIVERED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível pular uma entrega já finalizada.");
+        }
+
+        if (delivery.getStatus() == DeliveryStatus.CANCELLED || delivery.getStatus() == DeliveryStatus.SKIPPED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A entrega já se encontra finalizada.");
+        }
+
+        delivery.setStatus(DeliveryStatus.SKIPPED);
+        if (body != null && body.details() != null && !body.details().isBlank()) {
+            delivery.setDetails(body.details().trim());
+        }
         deliveryRepository.save(delivery);
 
         updateRouteStatusOnDeliveryChange(delivery.getRoute());
@@ -108,7 +181,9 @@ public class DeliveryController {
         List<Delivery> deliveries = deliveryRepository.findByRouteId(route.getId());
         if (deliveries != null && !deliveries.isEmpty()) {
             boolean allFinalized = deliveries.stream()
-                    .allMatch(d -> d.getStatus() == DeliveryStatus.DELIVERED || d.getStatus() == DeliveryStatus.CANCELLED);
+                    .allMatch(d -> d.getStatus() == DeliveryStatus.DELIVERED
+                            || d.getStatus() == DeliveryStatus.CANCELLED
+                            || d.getStatus() == DeliveryStatus.SKIPPED);
 
             if (allFinalized) {
                 route.setStatus(RouteStatus.COMPLETED);
@@ -164,6 +239,7 @@ public class DeliveryController {
                 delivery.getLatitude(),
                 delivery.getLongitude(),
                 delivery.getRecipientEmail(),
+                delivery.getDetails(),
                 delivery.getPickedUpAt(),
                 delivery.getDeliveredAt()
         );

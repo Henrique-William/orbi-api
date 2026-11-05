@@ -13,6 +13,7 @@ public record DeliveryDto(
         BigDecimal latitude,
         BigDecimal longitude,
         String recipientEmail,
+        String details,
         LocalDateTime pickedUpAt,
         LocalDateTime deliveredAt
 ) {
@@ -21,9 +22,23 @@ public record DeliveryDto(
             int order,
             DeliveryStatus status,
             String address,
+            BigDecimal latitude,
+            BigDecimal longitude,
+            String recipientEmail,
             LocalDateTime pickedUpAt,
             LocalDateTime deliveredAt
     ) {
-        this(id, order, status, address, null, null, null, pickedUpAt, deliveredAt);
+        this(id, order, status, address, latitude, longitude, recipientEmail, null, pickedUpAt, deliveredAt);
+    }
+
+    public DeliveryDto(
+            Long id,
+            int order,
+            DeliveryStatus status,
+            String address,
+            LocalDateTime pickedUpAt,
+            LocalDateTime deliveredAt
+    ) {
+        this(id, order, status, address, null, null, null, null, pickedUpAt, deliveredAt);
     }
 }

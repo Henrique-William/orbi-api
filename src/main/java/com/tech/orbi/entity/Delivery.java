@@ -49,6 +49,9 @@ public class Delivery {
     @Column(name = "recipient_email")
     private String recipientEmail;
 
+    @Column(name = "details", columnDefinition = "TEXT")
+    private String details;
+
     @PrePersist
     protected void onCreate() {
         if (status == null) {

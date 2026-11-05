@@ -360,6 +360,7 @@ public class RouteController {
                 delivery.getLatitude(),
                 delivery.getLongitude(),
                 delivery.getRecipientEmail(),
+                delivery.getDetails(),
                 delivery.getPickedUpAt(),
                 delivery.getDeliveredAt()
         );
