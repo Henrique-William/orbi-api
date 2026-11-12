@@ -7,8 +7,8 @@
   const C = P.charts;
   const D = P.D, M = P.M;
   const { $, $$, esc, ic } = P;
-  const COLORS = { ok: '#059669', skip: '#D97706', cancel: '#DC2626', blue: '#2557D6', sky: '#0EA5E9', violet: '#7C3AED', pink: '#DB2777', teal: '#0D9488' };
-  const ROUTE_COLORS = ['#2557D6', '#DB2777', '#0D9488', '#7C3AED', '#EA580C', '#0EA5E9', '#65A30D', '#B45309'];
+  const COLORS = { ok: '#0F9F6E', skip: '#E59A1A', cancel: '#D64545', blue: '#2557D6', sky: '#3E8EDE', violet: '#6E56CF', pink: '#C2417A', teal: '#14857A' };
+  const ROUTE_COLORS = ['#2557D6', '#C2417A', '#14857A', '#6E56CF', '#D9622B', '#3E8EDE', '#5E8C31', '#A86B12'];
   const pages = {};
   // endereço do protótipo HTML do app (modo demonstração); null quando o portal é publicado sem ele
   const PROTO = (window.ORBI_CONFIG || {}).prototipoUrl === undefined ? '../prototipo/' : window.ORBI_CONFIG.prototipoUrl;
@@ -19,15 +19,15 @@
   // Navegação
   // ==========================================================================
   const NAV = [
-    ['overview', 'Visão geral', 'grid'], ['live', 'Ao vivo', 'radar'], ['routes', 'Rotas', 'route'], ['drivers', 'Motoristas', 'users'],
-    ['occurrences', 'Ocorrências', 'alert'], ['reports', 'Relatórios', 'bars'], ['messages', 'Mensagens', 'chat'], ['settings', 'Configurações', 'settings']
+    ['overview', 'Visão geral', 'grid', 'Operação'], ['live', 'Ao vivo', 'radar', 'Operação'], ['routes', 'Rotas', 'route', 'Operação'], ['occurrences', 'Ocorrências', 'alert', 'Operação'],
+    ['drivers', 'Motoristas', 'users', 'Equipe'], ['messages', 'Mensagens', 'chat', 'Equipe'], ['reports', 'Relatórios', 'bars', 'Análise'], ['settings', 'Configurações', 'settings', 'Conta']
   ];
   const navItems = () => NAV.filter(n => !(P.API && n[0] === 'messages'));
   const CFG = window.ORBI_CONFIG || {};
   function syncPillHtml() {
     if (!P.API) return `<span class="sync-pill" id="syncPill" data-tip="&lt;b&gt;Conectado ao app&lt;/b&gt;&lt;div&gt;Mudanças feitas no app aparecem aqui na hora&lt;/div&gt;"><i></i><span>Ao vivo</span></span>`;
     const st = P.sync.state;
-    const label = st === 'waking' ? 'Acordando servidor…' : st === 'error' ? 'Sem conexão' : st === 'loading' ? 'Conectando…' : 'Ao vivo';
+    const label = st === 'waking' ? 'Acordando servidor…' : st === 'error' ? 'Sem conexão' : st === 'loading' ? 'Conectando…' : 'Sincronizado';
     const cls = st === 'error' ? 'err' : (st === 'waking' || st === 'loading') ? 'warn' : '';
     const tip = `<b>Conectado à Orbi API</b><div>Mesmos dados do app do motorista</div><div>Atualiza a cada ${CFG.pollSeconds || 10} s · última: ${P.sync.last ? P.hhmm(P.sync.last) : '—'}</div>${P.sync.error ? `<div>${esc(P.sync.error)}</div>` : ''}`;
     return `<span class="sync-pill ${cls}" id="syncPill" data-tip="${esc(tip)}"><i></i><span>${label}</span></span>`;
@@ -41,13 +41,26 @@
   function go(h) { if (location.hash === h) render(); else location.hash = h; }
   P.go = go;
 
+  // trilha no topo: "Grupo / Página" ou o caminho informado pela página (ex.: Rotas / R-102)
+  function crumbHtml(active, title, o) {
+    const n = NAV.find(x => x[0] === active);
+    const path = o.crumb && /<a /.test(o.crumb) ? o.crumb.split(' / ').slice(0, -1) : n ? [n[3]] : [];
+    return `<span class="crumb-path">${path.map(x => `${x}<span class="sep">/</span>`).join('')}<span class="cur">${esc(title)}</span></span>`;
+  }
+  function sessBannerHtml() {
+    if (!P.API || !P.sessionExpiresIn) return '';
+    const left = P.sessionExpiresIn() * 1000;
+    if (left > 3 * 60000 || left <= 0) return '';
+    return `<div class="sess-banner" id="sessBanner">${ic('clock', 'sm')}<span>Sua sessão expira em ${Math.max(1, Math.round(left / 60000))} min. Salve o que estiver fazendo e entre de novo para continuar.</span><button class="btn sm ghost" id="reLogin">Entrar de novo</button></div>`;
+  }
   function layout(active, title, body, opts) {
+    const o = opts || {}; const isPath = o.crumb && /<a /.test(o.crumb);
     const u = P.me(); const b = badges();
     const unreadN = P.notifs().filter(n => !n.read).length;
     return `<div class="app">
       <aside class="side" id="side">
         <a class="brand" href="#/overview"><span class="brand-logo">${P.LOGO}</span><span><b>Orbi</b><small>Portal da empresa</small></span></a>
-        <nav class="side-nav">${navItems().map(n => `<a href="#/${n[0]}" class="${active === n[0] ? 'on' : ''}">${ic(n[2])}<span>${n[1]}</span>${b[n[0]] ? `<em class="${n[0] === 'occurrences' ? 'red' : ''}">${b[n[0]]}</em>` : ''}</a>`).join('')}</nav>
+        <nav class="side-nav">${navItems().map((n, i, all) => `${!i || all[i - 1][3] !== n[3] ? `<div class="side-group">${n[3]}</div>` : ''}<a href="#/${n[0]}" class="${active === n[0] ? 'on' : ''}">${ic(n[2])}<span>${n[1]}</span>${b[n[0]] ? `<em class="${n[0] === 'occurrences' ? 'red' : ''}">${b[n[0]]}</em>` : ''}</a>`).join('')}</nav>
         <div class="side-foot">
           ${P.API ? `<a class="side-app" href="?demo" target="_blank" rel="noopener">${ic('eye', 'sm')}<span>Ver modo demonstração</span></a>` : PROTO ? `<a class="side-app" href="${PROTO}" target="_blank" rel="noopener">${ic('link', 'sm')}<span>Abrir app do motorista</span></a>` : ''}
           <div class="side-co">${ic('building', 'sm')}<span><b>${esc(P.S.company.name)}</b><small>${P.drivers().length} motoristas · ${P.admins().length} gestores</small></span></div>
@@ -57,14 +70,16 @@
       <div class="main">
         <header class="top">
           <button class="icon-btn only-m" id="menuBtn" aria-label="Menu">${ic('menu')}</button>
-          <div class="top-title"><h1>${esc(title)}</h1>${opts && opts.crumb ? `<span>${opts.crumb}</span>` : ''}</div>
+          <div class="top-title">${crumbHtml(active, title, o)}</div>
           <button class="search-btn" id="searchBtn" aria-label="Buscar">${ic('search', 'sm')}<span>Buscar rotas, motoristas…</span><kbd>Ctrl K</kbd></button>
           ${syncPillHtml()}
+          <span class="top-sep only-d"></span>
           <button class="icon-btn" id="themeBtn" aria-label="Alternar tema">${ic(document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon')}</button>
           <button class="icon-btn" id="bellBtn" aria-label="Notificações">${ic('bell')}${unreadN ? `<span class="dot">${unreadN}</span>` : ''}</button>
           <button class="user-btn" id="userBtn"><span class="avatar sm">${P.initials(u.name)}</span><span class="only-d"><b>${esc(P.first(u.name))}</b><small>${esc(u.title || 'Gestor')}</small></span>${ic('chevd', 'sm only-d')}</button>
         </header>
-        <main class="page" id="page">${body}</main>
+        ${sessBannerHtml()}
+        <main class="page" id="page">${o.noHead ? '' : `<div class="page-header"><div><h1>${esc(title)}</h1>${o.crumb && !isPath ? `<p>${o.crumb}</p>` : ''}</div>${o.actions ? `<div class="page-actions">${o.actions}</div>` : ''}</div>`}${body}</main>
       </div>
       <nav class="bnav">${[NAV[0], NAV[1], NAV[2], NAV[4]].map(n => `<a href="#/${n[0]}" class="${active === n[0] ? 'on' : ''}">${ic(n[2])}<span>${n[1]}</span>${b[n[0]] ? `<em>${b[n[0]]}</em>` : ''}</a>`).join('')}<button id="moreBtn" class="${['drivers', 'reports', 'messages', 'settings'].includes(active) ? 'on' : ''}">${ic('menu')}<span>Mais</span>${b.messages ? '<em>' + b.messages + '</em>' : ''}</button></nav>
     </div>`;
@@ -79,6 +94,7 @@
     $('#themeBtn', root).onclick = () => { setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); render(); };
     $('#bellBtn', root).onclick = e => { e.stopPropagation(); notifPanel(); };
     $('#userBtn', root).onclick = e => { e.stopPropagation(); userMenu(); };
+    const rl = $('#reLogin', root); if (rl) rl.onclick = () => { P.setSession(null); go('#/login'); };
   }
 
   // ==========================================================================
@@ -104,7 +120,7 @@
   function notifPanel() {
     const list = P.notifs().slice(0, 30);
     const p = popover(`<div class="pop-head"><b>Notificações</b>${list.some(n => !n.read) ? '<button class="link" id="readAll">Marcar todas como lidas</button>' : ''}</div>
-      <div class="pop-list">${list.length ? list.map(n => `<a href="${portalLink(n.link)}" class="nt ${n.read ? '' : 'unread'}" data-n="${n.id}"><span class="nt-ic">${ic(/🚨|seguran/i.test(n.title) ? 'shield' : /priorid|urgente|ciente/i.test(n.title) ? 'zap' : /coment|revis|resposta/i.test(n.title) ? 'chat' : /cancel|atras/i.test(n.title) ? 'alert' : 'route', 'sm')}</span><span><b>${esc(n.title)}</b><small>${esc(n.text)}</small><em>${P.rel(n.at)}</em></span></a>`).join('') : '<p class="muted small" style="padding:16px">Nenhuma notificação.</p>'}</div>`, '#bellBtn');
+      <div class="pop-list">${list.length ? list.map(n => `<a href="${portalLink(n.link)}" class="nt ${n.read ? '' : 'unread'}" data-n="${n.id}"><span class="nt-ic">${ic(/🚨|seguran|sos/i.test(n.title) ? 'shield' : /priorid|urgente|ciente/i.test(n.title) ? 'zap' : /coment|revis|resposta/i.test(n.title) ? 'chat' : /cancel|atras/i.test(n.title) ? 'alert' : 'route', 'sm')}</span><span><b>${esc(n.title)}</b><small>${esc(n.text)}</small><em>${P.rel(n.at)}</em></span></a>`).join('') : '<p class="muted small" style="padding:16px">Nenhuma notificação.</p>'}</div>`, '#bellBtn');
     const ra = $('#readAll', p); if (ra) ra.onclick = () => { P.act.readAllNotifs(); p.remove(); render(); };
     $$('[data-n]', p).forEach(a => a.addEventListener('click', () => { P.act.readNotif(a.dataset.n); p.remove(); }));
   }
@@ -241,7 +257,7 @@
           m.addEventListener('click', () => opts.onPick && opts.onPick(r.id));
           g.appendChild(m);
         }
-        m.setAttribute('data-tip', `<b>${esc(d ? d.name : '')} · ${esc(r.code)}</b><div>${sos ? '🚨 Alerta de segurança ativo' : `Indo para ${esc(pos.next ? P.stopAddr(pos.next) : '—')}`}</div><div>Chegada em ~${pos.eta} min · em ${esc(P.streetAt(pos))}</div>`);
+        m.setAttribute('data-tip', `<b>${esc(d ? d.name : '')} · ${esc(r.code)}</b><div>${sos ? 'Alerta de segurança ativo' : `Indo para ${esc(pos.next ? P.stopAddr(pos.next) : '—')}`}</div><div>Chegada em ~${pos.eta} min · em ${esc(P.streetAt(pos))}</div>`);
         m.style.transform = `translate(${pos.x}px, ${pos.y}px) scale(${K})`;
         m.style.opacity = opts.focus && opts.focus !== r.id ? .35 : 1;
         have.add(r.id);
@@ -321,7 +337,7 @@
     if (!inc.seenAt && inc.status === 'OPEN') { P.act.seeIncident(inc.id); inc = P.S.incidents.find(i => i.id === inc.id); }
     const d = P.user(inc.driverId); const r = inc.routeId && P.route(inc.routeId); const ins = P.insuranceOf(d); const v = P.vehicleOf(d);
     const urgent = ['ACCIDENT', 'HEALTH', 'ROBBERY'].includes(inc.type);
-    P.modal(`🚨 ${inc.label}`, `
+    P.modal(`Alerta de segurança · ${inc.label}`, `
       <div class="callout ${inc.status === 'OPEN' ? 'red' : 'green'}">${ic(inc.status === 'OPEN' ? 'shield' : 'check', 'sm')}<span><b>${inc.status === 'OPEN' ? 'Alerta ativo' : 'Resolvido ' + P.rel(inc.resolvedAt)}</b> · enviado ${P.rel(inc.at)} às ${P.hhmm(inc.at)}${inc.seenAt ? ` · visualizado às ${P.hhmm(inc.seenAt)}` : ''}</span></div>
       <div class="kv">
         <div><span>Motorista</span><b>${esc(d.name)} · ${esc(d.phone)}</b></div>
@@ -371,7 +387,7 @@
   }
   function assignModal(r) {
     let pick = r.driverId;
-    P.modal(`Atribuir motorista · ${r.code}`, `<div class="pick-list">${P.drivers().map(d => { const st = P.driverState(d); return `<button class="pick ${pick === d.id ? 'on' : ''}" data-d="${d.id}"><span class="avatar">${P.initials(d.name)}</span><span><b>${esc(d.name)}</b><small>${esc(d.vehicle)} · ★ ${P.num(d.rating || 0, 1)}</small></span><span class="badge ${st[1]}">${st[0]}</span></button>`; }).join('')}</div>
+    P.modal(`Atribuir motorista · ${r.code}`, `<div class="pick-list">${P.drivers().map(d => { const st = P.driverState(d); return `<button class="pick ${pick === d.id ? 'on' : ''}" data-d="${d.id}"><span class="avatar">${P.initials(d.name)}</span><span><b>${esc(d.name)}</b><small>${esc(d.vehicle)}${P.API ? '' : ` · nota ${P.num(d.rating || 0, 1)}`}</small></span><span class="badge ${st[1]}">${st[0]}</span></button>`; }).join('')}</div>
       ${r.status === 'IN_PROGRESS' ? '<div class="callout amber">' + ic('info', 'sm') + '<span>A rota está em andamento. Ao trocar, ela volta para “A iniciar” com o novo motorista.</span></div>' : ''}
       <div class="row end" style="margin-top:14px"><button class="btn primary" id="ok">Salvar</button></div>`, (m, close) => {
       $$('[data-d]', m).forEach(b => b.onclick = () => { pick = b.dataset.d; $$('[data-d]', m).forEach(x => x.classList.toggle('on', x === b)); });
@@ -385,23 +401,26 @@
   pages.login = () => ({
     bare: true,
     html: `<div class="login">
-      <section class="login-art"><div class="orbit"><span></span><span></span><span></span><i class="o1"></i><i class="o2"></i><i class="o3"></i></div>
-        <div class="login-copy"><span class="brand-logo lg">${P.LOGO}</span><h1>Orbi <span>para empresas</span></h1>
-          <p>Acompanhe suas entregas ao vivo, aja rápido nas ocorrências e analise os resultados da operação.</p>
-          <ul><li>${ic('radar', 'sm')} Monitoramento em tempo real da frota</li><li>${ic('alert', 'sm')} Alertas de segurança, atrasos e revisões</li><li>${ic('bars', 'sm')} Relatórios com exportação em CSV e PDF</li></ul></div></section>
-      <section class="login-form"><form id="f" novalidate>
-        <span class="brand-logo only-m">${P.LOGO}</span>
-        <h2>Entrar no portal</h2><p class="muted">Acesso exclusivo para <b>empresas e gestores</b>.</p>
+      <section class="login-form">
+        <div class="lf-top"><span class="brand-logo">${P.LOGO}</span>Orbi</div>
+        <form id="f" novalidate>
+        <h2>Entrar</h2><p class="muted">Portal de operações para empresas e gestores.</p>
         <label class="lbl" for="em">${P.API ? 'E-mail ou usuário' : 'E-mail corporativo'}</label><div class="input" id="emw">${ic('mail', 'sm')}<input id="em" type="${P.API ? 'text' : 'email'}" autocomplete="username" placeholder="nome@empresa.com"></div>
         <label class="lbl" for="pw">Senha</label><div class="input" id="pww">${ic('lock', 'sm')}<input id="pw" type="password" autocomplete="current-password" placeholder="Sua senha"><button type="button" class="icon-btn sm" id="eye" aria-label="Mostrar senha">${ic('eye', 'sm')}</button></div>
         <div class="form-err" id="err" role="alert"></div>
         <button class="btn primary block lg" id="btn">Entrar</button>
-        <button type="button" class="link" id="forgot" style="margin:12px auto 0;display:block">Esqueci minha senha</button>
-        ${P.API ? `<p class="muted small" style="margin:14px 0 0">Use sua conta de <b>gestor (ADMIN)</b> da Orbi API, a mesma do sistema. Os dados são os do app do motorista.</p>
-        <a class="link" href="?demo" style="margin-top:10px">${ic('eye', 'xs')} Ver o portal em modo demonstração</a>` : `<div class="or">contas de demonstração · senha orbi123</div>`}
+        <div class="row between" style="margin-top:14px"><button type="button" class="link" id="forgot">Esqueci minha senha</button>${P.API ? `<a class="link" href="?demo">Ver demonstração</a>` : ''}</div>
+        ${P.API ? `<p class="muted small" style="margin:18px 0 0">Use sua conta de gestor (perfil ADMIN) da Orbi API.</p>` : `<div class="or">contas de demonstração · senha orbi123</div>`}
         ${P.API ? '' : `<div class="demo-row"><button type="button" class="demo" data-demo="gestor@orbi.demo">${ic('users', 'sm')}<span><b>Gestor</b><small>Ana Souza</small></span></button><button type="button" class="demo" data-demo="empresa@orbi.demo">${ic('building', 'sm')}<span><b>Empresa</b><small>Roberto Almeida</small></span></button></div>`}
-        <div class="callout neutral" style="margin-top:18px">${ic('truck', 'sm')}<span>É motorista? O acesso é pelo ${P.API ? '<b>app Orbi</b> no celular' : protoA('app Orbi')}.</span></div>
-      </form></section></div>`,
+        <p class="muted small" style="margin:20px 0 0">É motorista? O acesso é pelo ${P.API ? 'app Orbi no celular' : protoA('app Orbi')}.</p>
+      </form>
+        <div class="lf-foot"><span>© ${new Date().getFullYear()} Orbi Logística</span><span>${P.API ? 'Conectado à Orbi API' : 'Modo demonstração'}</span></div></section>
+      <section class="login-art">
+        <span class="eyebrow">Orbi para empresas</span>
+        <div class="login-copy"><h1>A operação de entregas inteira, em uma tela.</h1>
+          <p>Acompanhe as rotas enquanto acontecem, resolva ocorrências antes que virem reclamação e meça o resultado de cada motorista.</p></div>
+        <div class="login-feats"><div><b>Ao vivo</b><span>Posição e progresso de cada rota, sincronizados com o app do motorista.</span></div><div><b>Ocorrências</b><span>Atrasos, paradas puladas e rotas sem motorista em uma só fila.</span></div><div><b>Relatórios</b><span>Taxa de sucesso, custo por entrega e exportação em CSV ou PDF.</span></div></div>
+      </section></div>`,
     mount(root) {
       const em = $('#em', root), pw = $('#pw', root), err = $('#err', root), btn = $('#btn', root);
       $('#eye', root).onclick = () => { pw.type = pw.type === 'password' ? 'text' : 'password'; };
@@ -414,7 +433,7 @@
         btn.disabled = true; btn.innerHTML = `${ic('refresh', 'sm spin')} Entrando…`;
         if (P.API) {
           const slow = setTimeout(() => { btn.innerHTML = `${ic('refresh', 'sm spin')} Acordando o servidor… (até 1 min)`; }, 6000);
-          P.apiLogin(email, pass).then(() => { clearTimeout(slow); P.toast(`Bem-vindo(a), ${P.first(P.me().name)}!`, 'check'); go('#/overview'); })
+          P.apiLogin(email, pass).then(() => { clearTimeout(slow); P.toast(`Sessão iniciada como ${P.first(P.me().name)}`, 'check'); go('#/overview'); })
             .catch(e => { clearTimeout(slow); btn.disabled = false; btn.textContent = 'Entrar';
               if (e.restricted) fail(`${ic('lock', 'sm')} <span><b>Acesso restrito.</b> O portal é exclusivo para empresas e gestores (perfil ADMIN). Motoristas usam o app Orbi.</span>`, '#emw');
               else fail(esc(e.message || 'Não foi possível entrar.'), e.status === 401 ? '#pww' : null); });
@@ -427,7 +446,7 @@
           if (!u || u.password !== pass) return fail('E-mail ou senha incorretos.', '#pww');
           if (u.role !== 'ADMIN') return fail(`${ic('lock', 'sm')} <span><b>Acesso restrito.</b> O portal é exclusivo para empresas e gestores. Motoristas usam o ${protoA('app Orbi')}.</span>`, '#emw');
           P.setSession({ userId: u.id, at: new Date().toISOString() });
-          P.toast(`Bem-vindo(a), ${P.first(u.name)}!`, 'check');
+          P.toast(`Sessão iniciada como ${P.first(u.name)}`, 'check');
           go('#/overview');
         }, 600);
       };
@@ -456,20 +475,20 @@
     const rank = P.drivers().map(d => Object.assign({ d }, driverStats(d.id, h7))).sort((a, b) => b.success - a.success || b.delivered - a.delivered);
     const activeDrivers = P.drivers().filter(d => ['Em rota', 'SOS', 'Escalado'].includes(P.driverState(d)[0])).length;
     return {
-      active: 'overview', title: 'Visão geral', crumb: (d => d.charAt(0).toUpperCase() + d.slice(1))(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })),
+      active: 'overview', title: 'Visão geral',
+      crumb: `${(d => d.charAt(0).toUpperCase() + d.slice(1))(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }))} · ${t.live ? P.plural(t.live, 'rota em andamento', 'rotas em andamento') : 'nenhuma rota em andamento'} · ${occ.length ? P.plural(occ.length, 'pendência', 'pendências') : 'sem pendências'}`,
+      actions: `<a class="btn ghost" href="#/reports">${ic('bars', 'sm')} Relatórios</a><a class="btn primary" href="#/new">${ic('plus', 'sm')} Nova rota</a>`,
       html: `
-      <div class="hello"><div><h2>${hello}, ${esc(P.first(u.name))} 👋</h2><p class="muted">${t.live ? `${P.plural(t.live, 'rota em andamento', 'rotas em andamento')} agora` : 'Nenhuma rota em andamento agora'} · ${P.plural(occ.length, 'item pede', 'itens pedem')} sua atenção</p></div>
-        <div class="row wrap"><a class="btn ghost" href="#/reports">${ic('bars', 'sm')} Relatórios</a><a class="btn primary" href="#/new">${ic('plus', 'sm')} Nova rota</a></div></div>
       ${sos.map(i => { const d = P.user(i.driverId); return `<button class="sos-strip" data-inc="${i.id}"><span class="pulse-ic">${ic('shield')}</span><span><b>Alerta de segurança · ${esc(d.name)}</b><small>${esc(i.label)} · perto de ${esc(i.street)} · ${P.rel(i.at)}${i.seenAt ? ' · você está acompanhando' : ' · ainda não visualizado'}</small></span><span class="btn sm light">Ver alerta</span></button>`; }).join('')}
       <div class="kpi-grid">
         ${kpi({ label: 'Entregas concluídas', icon: 'check', color: COLORS.ok, value: `${t.delivered}<span class="of">/${t.stops}</span>`, sub: `${t.pending} pendentes`, spark: h14.map(d => d.delivered).concat([t.delivered]), href: '#/routes', tip: `<b>Entregas de hoje</b><div>${P.pct(t.delivered, t.stops)}% das paradas do dia · média diária: ${P.num(avg7('delivered'))}</div>`, foot: `${P.pct(t.delivered, t.stops)}% do planejado para hoje` })}
         ${kpi({ label: 'Taxa de sucesso', icon: 'trend', color: COLORS.blue, value: `${successToday}%`, sub: `meta ${goals.successRate}%`, spark: successSeries(h14).concat([successToday]), href: '#/reports', delta: workDays(h7).length ? successToday - Math.round(succ7) : null, deltaUnit: ' p.p.', tip: '<b>Entregues ÷ paradas tratadas</b><div>Média dos últimos 7 dias: ' + Math.round(succ7) + '%</div>' })}
-        ${kpi({ label: 'Rotas em andamento', icon: 'radar', color: COLORS.sky, value: `${t.live}<span class="of">/${t.routes}</span>`, sub: `${t.delayed} atrasada(s)`, href: '#/live', foot: `${activeDrivers} de ${P.drivers().length} motoristas na operação` })}
-        ${kpi({ label: 'Ocorrências abertas', icon: 'alert', color: COLORS.cancel, value: `${occ.length}`, sub: `${P.API ? '' : sos.length + ' SOS · '}${t.skipped + t.cancelled} paradas com problema`, href: '#/occurrences', goodUp: false, foot: occ.length ? 'Clique para resolver' : 'Tudo em dia ✓' })}
+        ${kpi({ label: 'Rotas em andamento', icon: 'radar', color: COLORS.sky, value: `${t.live}<span class="of">/${t.routes}</span>`, sub: t.delayed ? P.plural(t.delayed, 'atrasada', 'atrasadas') : 'nenhuma atrasada', href: '#/live', foot: `${activeDrivers} de ${P.drivers().length} motoristas na operação` })}
+        ${kpi({ label: 'Ocorrências abertas', icon: 'alert', color: COLORS.cancel, value: `${occ.length}`, sub: `${P.API ? '' : sos.length + ' SOS · '}${P.plural(t.skipped + t.cancelled, 'parada com problema', 'paradas com problema')}`, href: '#/occurrences', goodUp: false, foot: occ.length ? 'Ver e resolver' : 'Nenhuma pendência' })}
         ${P.API ? kpi({ label: 'Rotas concluídas hoje', icon: 'check', color: COLORS.violet, value: `${P.S.routes.filter(r => P.isToday(r) && r.status === 'COMPLETED').length}`, sub: `de ${t.routes} rotas`, href: '#/routes' }) : kpi({ label: 'Pontualidade · 7 dias', icon: 'clock', color: COLORS.violet, value: `${P.pct(h7.reduce((a, d) => a + d.onTime, 0), h7.reduce((a, d) => a + d.routes, 0) || 1)}%`, sub: `meta ${goals.onTime}%`, href: '#/reports', spark: h14.map(d => P.pct(d.onTime, d.routes || 1)), foot: `Hoje: ${t.onTimePct}% das rotas iniciadas no horário`, tip: '<b>Rotas iniciadas até 20 min após o início da janela</b>' })}
         ${kpi({ label: 'Distância prevista', icon: 'route', color: COLORS.teal, value: `${P.num(t.km, 1)}<span class="of"> km</span>`, sub: `média 7d ${P.num(avg7('km'), 0)} km`, href: '#/reports', spark: h14.map(d => d.km).concat([t.km]) })}
         ${kpi({ label: 'Custo estimado hoje', icon: 'wallet', color: COLORS.skip, value: P.money(t.cost), sub: t.delivered ? `${P.money(t.cost / Math.max(1, t.stops))} por parada` : '', href: '#/reports', tip: '<b>Estimativa</b><div>km × R$ 1,85 + R$ 2,50 por parada</div>' })}
-        ${P.API ? kpi({ label: 'Motoristas', icon: 'users', color: '#F59E0B', value: `${activeDrivers}<span class="of">/${P.drivers().length}</span>`, sub: 'em rota ou escalados', href: '#/drivers' }) : kpi({ label: 'Avaliação média', icon: 'star', color: '#F59E0B', value: P.num(avg(P.drivers().map(d => d.rating || 0)), 1) + '<span class="of"> ★</span>', sub: `${P.S.reviews.length} avaliações recentes`, href: '#/drivers' })}
+        ${P.API ? kpi({ label: 'Motoristas', icon: 'users', color: '#F59E0B', value: `${activeDrivers}<span class="of">/${P.drivers().length}</span>`, sub: 'em rota ou escalados', href: '#/drivers' }) : kpi({ label: 'Avaliação média', icon: 'star', color: '#F59E0B', value: P.num(avg(P.drivers().map(d => d.rating || 0)), 1) + '<span class="of"> / 5</span>', sub: `${P.S.reviews.length} avaliações recentes`, href: '#/drivers' })}
       </div>
       <div class="grid g-2-1">
         <section class="card"><div class="card-head"><h3>Entregas nos últimos 14 dias</h3><a class="link" href="#/reports">Ver relatório ${ic('chev', 'xs')}</a></div>
@@ -479,7 +498,7 @@
           ${C.donut([{ label: 'Entregues', value: t.delivered, color: COLORS.ok }, { label: 'Pendentes', value: t.pending, color: '#94A3B8' }, { label: 'Puladas', value: t.skipped, color: COLORS.skip }, { label: 'Canceladas', value: t.cancelled, color: COLORS.cancel }], `${P.pct(t.delivered + t.skipped + t.cancelled, t.stops)}%`, 'tratadas')}</section>
       </div>
       <div class="grid g-1-1">
-        <section class="card pad0"><div class="card-head pad"><h3>Frota ao vivo</h3><a class="link" href="#/live">Tela cheia ${ic('expand', 'xs')}</a></div><div class="mini-map" id="ovMap"></div></section>
+        <section class="card pad0"><div class="card-head pad"><h3>Frota ao vivo</h3><a class="link" href="#/live">Abrir mapa ${ic('chev', 'xs')}</a></div><div class="mini-map" id="ovMap"></div></section>
         <section class="card"><div class="card-head"><h3>Rotas de hoje</h3><a class="link" href="#/routes">Todas ${ic('chev', 'xs')}</a></div>
           <div class="rlist">${todayRoutes.length ? todayRoutes.map(r => { const inf = P.routeInfo(r); const d = P.user(r.driverId); return `<a class="rrow" href="#/route/${r.id}">${healthDot(r)}<span class="rr-main"><b>${esc(r.code)}</b><small>${d ? esc(d.name) : 'Sem motorista'} · ${esc(r.window)}</small></span><span class="rr-flags">${routeFlags(r)}${P.badge(P.ROUTE_STATUS, r.status)}</span><span class="rr-prog">${progress(inf.pct, r.status === 'COMPLETED' ? 'green' : '')}<small>${inf.handled}/${inf.total}</small></span></a>`; }).join('') : empty('route', 'Nenhuma rota hoje', 'Crie a primeira rota do dia.')}</div></section>
       </div>
@@ -487,7 +506,7 @@
         <section class="card"><div class="card-head"><h3>Motivos de ocorrência · 30 dias</h3><a class="link" href="#/occurrences">Ocorrências ${ic('chev', 'xs')}</a></div>
           ${C.hbars(Object.entries(reasons).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v], i) => ({ label: k, value: v, color: i === 0 ? COLORS.cancel : i < 3 ? COLORS.skip : '#94A3B8' })))}</section>
         <section class="card"><div class="card-head"><h3>Ranking de motoristas · 7 dias</h3><a class="link" href="#/drivers">Motoristas ${ic('chev', 'xs')}</a></div>
-          <div class="rank">${rank.map((x, i) => `<a class="rank-row" href="#/driver/${x.d.id}"><span class="pos p${i + 1}">${i + 1}º</span><span class="avatar sm">${P.initials(x.d.name)}</span><span class="rk-main"><b>${esc(x.d.name)}</b><small>${x.delivered} entregas · ★ ${P.num(x.d.rating || 0, 1)}</small></span><span class="rk-val"><b>${x.success}%</b><small>sucesso</small></span></a>`).join('')}</div></section>
+          <div class="rank">${rank.map((x, i) => `<a class="rank-row" href="#/driver/${x.d.id}"><span class="pos p${i + 1}">${i + 1}º</span><span class="avatar sm">${P.initials(x.d.name)}</span><span class="rk-main"><b>${esc(x.d.name)}</b><small>${x.delivered} entregas${P.API ? '' : ` · nota ${P.num(x.d.rating || 0, 1)}`}</small></span><span class="rk-val"><b>${x.success}%</b><small>sucesso</small></span></a>`).join('')}</div></section>
       </div>`,
       mount(root) {
         $$('[data-inc]', root).forEach(b => b.onclick = () => incidentModal(P.S.incidents.find(i => i.id === b.dataset.inc)));
@@ -510,7 +529,7 @@
       active: 'live', title: 'Ao vivo', crumb: P.API ? 'Rotas e paradas da Orbi API, atualizadas automaticamente' : 'Posição estimada da frota em tempo real',
       html: `<div class="live" id="liveWrap">
         <section class="live-map card pad0"><div class="map-host" id="lm"></div>
-          <div class="live-top"><span class="live-dot"></span><b>${rs.filter(r => r.status === 'IN_PROGRESS').length} em rota</b><span class="muted small">${P.API ? `atualiza a cada ${CFG.pollSeconds || 10} s · posição = última parada registrada` : 'atualiza a cada segundo'}</span><button class="btn sm ghost" id="tv">${ic('tv', 'sm')} Modo TV</button></div></section>
+          <div class="live-top"><span class="live-dot"></span><b>${rs.filter(r => r.status === 'IN_PROGRESS').length} em rota</b><span class="muted small">${P.API ? `atualiza a cada ${CFG.pollSeconds || 10} s · posição = última parada registrada` : 'atualiza a cada segundo'}</span><button class="btn sm ghost" id="tv">${ic('expand', 'sm')} Tela cheia</button></div></section>
         <aside class="live-side">
           <div class="chips">${FL.map(x => `<button class="chip ${liveState.filter === x[0] ? 'on' : ''}" data-f="${x[0]}">${x[1]} <em>${x[2]}</em></button>`).join('')}</div>
           ${f ? focusCard(f) : ''}
@@ -553,23 +572,26 @@
     const key = { status: r => ORDER.indexOf(r.status) * 10 - P.prioRank(r), code: r => r.code, driver: r => (P.user(r.driverId) || {}).name || 'zz', window: r => r.window, progress: r => P.routeInfo(r).pct, km: r => P.routeInfo(r).km, cost: r => P.routeInfo(r).cost };
     list.sort((a, b) => { const x = key[routesState.sort](a), y = key[routesState.sort](b); return (x > y ? 1 : x < y ? -1 : 0) * routesState.dir; });
     const cnt = s => base.filter(r => s === 'ALL' || r.status === s || (s === 'ATTN' && P.health(r).worst !== 'ok')).length;
+    const PER = 25; const nPages = Math.max(1, Math.ceil(list.length / PER)); const pg0 = Math.min(routesState.page || 0, nPages - 1);
     const th = (k, l) => `<th data-s="${k}" class="${routesState.sort === k ? 'sorted' : ''}">${l}${routesState.sort === k ? (routesState.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
     return {
-      active: 'routes', title: 'Rotas', crumb: `${base.length} rota(s) ${routesState.day === 'today' ? 'hoje' : 'no total'}`,
+      active: 'routes', title: 'Rotas', crumb: `${P.plural(base.length, 'rota', 'rotas')} ${routesState.day === 'today' ? 'hoje' : 'no total'}`,
+      actions: `<button class="btn ghost" id="csv">${ic('download', 'sm')} Exportar CSV</button><a class="btn primary" href="#/new">${ic('plus', 'sm')} Nova rota</a>`,
       html: `<div class="toolbar"><div class="input grow">${ic('search', 'sm')}<input id="q" value="${esc(routesState.q)}" placeholder="Buscar por código, motorista, endereço ou cliente"></div>
-        <div class="seg"><button class="${routesState.day === 'today' ? 'on' : ''}" data-day="today">Hoje</button><button class="${routesState.day === 'all' ? 'on' : ''}" data-day="all">Todas</button></div>
-        <button class="btn ghost" id="csv">${ic('download', 'sm')} CSV</button><a class="btn primary" href="#/new">${ic('plus', 'sm')} Nova rota</a></div>
+        <div class="seg"><button class="${routesState.day === 'today' ? 'on' : ''}" data-day="today">Hoje</button><button class="${routesState.day === 'all' ? 'on' : ''}" data-day="all">Todas</button></div></div>
         <div class="chips">${[['ALL', 'Todas'], ['ATTN', 'Precisam de atenção'], ['IN_PROGRESS', 'Em andamento'], ['DELAYED', 'Atrasadas'], ['ASSIGNED', 'A iniciar'], ['CREATED', 'Sem motorista'], ['COMPLETED', 'Concluídas']].map(x => `<button class="chip ${routesState.st === x[0] ? 'on' : ''}" data-st="${x[0]}">${x[1]} <em>${cnt(x[0])}</em></button>`).join('')}</div>
         <section class="card pad0">${list.length ? `<table class="tbl"><thead><tr><th></th>${th('code', 'Rota')}${th('status', 'Status')}${th('driver', 'Motorista')}${th('window', P.API ? 'Criação' : 'Janela')}${th('progress', 'Progresso')}${th('km', 'Distância')}${th('cost', 'Custo')}<th></th></tr></thead><tbody>
-          ${list.map(r => { const inf = P.routeInfo(r); const d = P.user(r.driverId); return `<tr data-href="#/route/${r.id}" tabindex="0"><td data-l="">${healthDot(r)}</td><td data-l="Rota"><b>${esc(r.code)}</b></td><td data-l="Status"><span class="row wrap" style="gap:4px">${P.badge(P.ROUTE_STATUS, r.status)}${routeFlags(r)}</span></td>
+          ${list.slice(pg0 * PER, pg0 * PER + PER).map(r => { const inf = P.routeInfo(r); const d = P.user(r.driverId); return `<tr data-href="#/route/${r.id}" tabindex="0"><td data-l="">${healthDot(r)}</td><td data-l="Rota"><b>${esc(r.code)}</b></td><td data-l="Status"><span class="row wrap" style="gap:4px">${P.badge(P.ROUTE_STATUS, r.status)}${routeFlags(r)}</span></td>
             <td data-l="Motorista">${d ? `<span class="who"><span class="avatar xs">${P.initials(d.name)}</span>${esc(d.name)}</span>` : '<span class="muted">—</span>'}</td><td data-l="${P.API ? 'Criação' : 'Janela'}">${esc(r.window)}</td>
-            <td data-l="Progresso"><span class="prog-cell">${progress(inf.pct, r.status === 'COMPLETED' ? 'green' : '')}<small>${inf.handled}/${inf.total}</small></span></td><td data-l="Distância">${P.num(inf.km, 1)} km</td><td data-l="Custo">${P.money(inf.cost)}</td><td class="chev">${ic('chev', 'sm')}</td></tr>`; }).join('')}</tbody></table>`
+            <td data-l="Progresso"><span class="prog-cell">${progress(inf.pct, r.status === 'COMPLETED' ? 'green' : '')}<small>${inf.handled}/${inf.total}</small></span></td><td data-l="Distância">${P.num(inf.km, 1)} km</td><td data-l="Custo">${P.money(inf.cost)}</td><td class="chev">${ic('chev', 'sm')}</td></tr>`; }).join('')}</tbody></table>
+          ${nPages > 1 ? `<div class="pager"><span>${pg0 * PER + 1}–${Math.min(list.length, pg0 * PER + PER)} de ${list.length}</span><span class="row"><button class="btn sm ghost" data-pg="-1" ${pg0 ? '' : 'disabled'}>Anterior</button><button class="btn sm ghost" data-pg="1" ${pg0 < nPages - 1 ? '' : 'disabled'}>Próxima</button></span></div>` : ''}`
         : empty('route', 'Nenhuma rota encontrada', 'Ajuste a busca ou os filtros.')}</section>`,
       mount(root) {
         const q = $('#q', root);
-        q.oninput = () => { routesState.q = q.value; render(); const n = $('#q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
-        $$('[data-st]', root).forEach(b => b.onclick = () => { routesState.st = b.dataset.st; render(); });
-        $$('[data-day]', root).forEach(b => b.onclick = () => { routesState.day = b.dataset.day; render(); });
+        $$('[data-pg]', root).forEach(b => b.onclick = () => { routesState.page = pg0 + Number(b.dataset.pg); render(); window.scrollTo(0, 0); });
+        q.oninput = () => { routesState.q = q.value; routesState.page = 0; render(); const n = $('#q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+        $$('[data-st]', root).forEach(b => b.onclick = () => { routesState.st = b.dataset.st; routesState.page = 0; render(); });
+        $$('[data-day]', root).forEach(b => b.onclick = () => { routesState.day = b.dataset.day; routesState.page = 0; render(); });
         $$('[data-s]', root).forEach(t => t.onclick = () => { if (routesState.sort === t.dataset.s) routesState.dir *= -1; else { routesState.sort = t.dataset.s; routesState.dir = 1; } render(); });
         $$('tr[data-href]', root).forEach(tr => { tr.onclick = () => go(tr.dataset.href); tr.onkeydown = e => { if (e.key === 'Enter') go(tr.dataset.href); }; });
         $('#csv', root).onclick = () => { P.downloadCSV(`orbi-rotas-${new Date().toISOString().slice(0, 10)}.csv`, [['Rota', 'Status', 'Motorista', 'Janela', 'Paradas', 'Tratadas', 'Entregues', 'Puladas', 'Canceladas', 'Km', 'Custo (R$)']].concat(list.map(r => { const i = P.routeInfo(r); return [r.code, P.ROUTE_STATUS[r.status][0], (P.user(r.driverId) || {}).name || '', r.window, i.total, i.handled, i.done, i.skipped, i.cancelled, P.num(i.km, 1), P.num(i.cost, 2)]; }))); P.toast('Planilha CSV gerada', 'download'); };
@@ -586,15 +608,15 @@
     if (r.createdAt) log.push([r.createdAt, 'Rota criada', 'route']);
     if (r.startedAt) log.push([r.startedAt, 'Rota iniciada pelo motorista', 'truck']);
     r.stops.forEach((s, i) => { if (s.at) log.push([s.at, `Parada #${String(i + 1).padStart(2, '0')} · ${P.STOP_STATUS[s.status][0].toLowerCase()}${s.reason ? ' · ' + s.reason : ''}`, s.status === 'COMPLETED' ? 'check' : s.status === 'SKIPPED' ? 'skip' : 'xcircle']); });
-    P.chatOf(r.id).filter(m => m.kind !== 'text').forEach(m => log.push([m.at, m.kind === 'priority' ? 'Alerta de prioridade enviado' : m.kind === 'ack' ? 'Motorista confirmou “Ciente”' : m.kind === 'sos' ? '🚨 ' + m.text : m.text, m.kind === 'sos' ? 'shield' : m.kind === 'priority' ? 'zap' : 'info']));
+    P.chatOf(r.id).filter(m => m.kind !== 'text').forEach(m => log.push([m.at, m.kind === 'priority' ? 'Alerta de prioridade enviado' : m.kind === 'ack' ? 'Motorista confirmou “Ciente”' : m.kind === 'sos' ? 'Alerta de segurança: ' + m.text : m.text, m.kind === 'sos' ? 'shield' : m.kind === 'priority' ? 'zap' : 'info']));
     if (r.finishedAt) log.push([r.finishedAt, 'Rota concluída', 'check']);
     log.sort((a, b) => Date.parse(b[0]) - Date.parse(a[0]));
     return {
-      active: 'routes', title: `Rota ${r.code}`, crumb: `<a href="#/routes">Rotas</a> / ${esc(r.code)}`,
+      active: 'routes', title: `Rota ${r.code}`, crumb: `<a href="#/routes">Rotas</a> / ${esc(r.code)}`, noHead: true,
       html: `<div class="page-head"><a class="icon-btn" href="#/routes" aria-label="Voltar">${ic('back')}</a><div class="ph-main"><h2>${esc(r.code)}</h2><span class="row wrap" style="gap:6px">${P.badge(P.ROUTE_STATUS, r.status)}${routeFlags(r)}</span></div>
         <div class="row wrap ph-actions">${P.API ? '' : `<button class="btn ghost" id="prio" ${!d || r.status === 'COMPLETED' ? 'disabled' : ''}>${ic('zap', 'sm')} Prioridade</button><a class="btn ghost ${d ? '' : 'disabled'}" href="#/messages/${r.id}">${ic('chat', 'sm')} Mensagem${P.unreadChat(r.id, P.me()) ? ` <em class="pill-n">${P.unreadChat(r.id, P.me())}</em>` : ''}</a>`}
         <button class="btn ghost" id="asg" ${['COMPLETED', 'CANCELLED'].includes(r.status) ? 'disabled' : ''}>${ic('users', 'sm')} ${d ? 'Trocar motorista' : 'Atribuir'}</button><button class="btn ghost" id="csv">${ic('download', 'sm')}</button>${canCancel ? `<button class="btn ghost danger-t" id="cnl">${ic('xcircle', 'sm')} Cancelar rota</button>` : ''}${canDelete ? `<button class="btn ghost danger-t" id="del">${ic('trash', 'sm')}</button>` : ''}</div></div>
-      ${r.priority && r.status !== 'COMPLETED' ? `<div class="callout ${r.priority.level === 'URGENT' ? 'red' : 'amber'}">${ic('zap', 'sm')}<span><b>${P.PRIORITY[r.priority.level][0]}</b> · “${esc(r.priority.message)}” · enviado ${P.rel(r.priority.at)} · ${r.priority.requireAck ? (r.priority.ackAt ? `motorista ciente às ${P.hhmm(r.priority.ackAt)} ✓` : 'aguardando “Ciente”') : 'sem confirmação'}</span></div>` : ''}
+      ${r.priority && r.status !== 'COMPLETED' ? `<div class="callout ${r.priority.level === 'URGENT' ? 'red' : 'amber'}">${ic('zap', 'sm')}<span><b>${P.PRIORITY[r.priority.level][0]}</b> · “${esc(r.priority.message)}” · enviado ${P.rel(r.priority.at)} · ${r.priority.requireAck ? (r.priority.ackAt ? `motorista ciente às ${P.hhmm(r.priority.ackAt)}` : 'aguardando “Ciente”') : 'sem confirmação'}</span></div>` : ''}
       <div class="grid g-2-1">
         <section class="card pad0"><div class="map-host tall" id="rm"></div></section>
         <div class="stack">
@@ -799,10 +821,10 @@
     const hist = P.history(7);
     const ds = P.drivers();
     return {
-      active: 'drivers', title: 'Motoristas', crumb: `${ds.length} motoristas cadastrados`,
+      active: 'drivers', title: 'Motoristas', crumb: `${P.plural(ds.length, 'motorista cadastrado', 'motoristas cadastrados')}`,
       html: `<div class="toolbar"><div class="row wrap" style="gap:8px">${['Em rota', 'Escalado', 'Disponível', 'SOS'].map(s => { const n = ds.filter(d => P.driverState(d)[0] === s).length; return n ? `<span class="badge ${s === 'SOS' ? 'red' : s === 'Em rota' ? 'blue' : s === 'Disponível' ? 'green' : 'neutral'}">${s}: ${n}</span>` : ''; }).join('')}</div><span class="grow"></span>${P.API ? '' : `<button class="btn primary" id="nd">${ic('plus', 'sm')} Novo motorista</button>`}</div>
         <div class="dgrid">${ds.map(d => { const st = P.driverState(d); const s7 = driverStats(d.id, hist); const v = P.API ? null : P.vehicleOf(d); const ins = P.API ? {} : P.insuranceOf(d); return `<a class="dcard card" href="#/driver/${d.id}">
-          <div class="row" style="gap:12px"><span class="avatar lg ${st[0] === 'SOS' ? 'sos' : ''}">${P.initials(d.name)}</span><span class="grow"><b>${esc(d.name)}</b><small class="block muted">${P.API ? esc(d.email || d.phone || 'Motorista') : `★ ${P.num(d.rating || 0, 1)} · ${d.ratingsCount || 0} avaliações`}</small></span><span class="badge ${st[1]}">${st[0]}</span></div>
+          <div class="row" style="gap:12px"><span class="avatar lg ${st[0] === 'SOS' ? 'sos' : ''}">${P.initials(d.name)}</span><span class="grow"><b>${esc(d.name)}</b><small class="block muted">${P.API ? esc(d.email || d.phone || 'Motorista') : `Nota ${P.num(d.rating || 0, 1)} · ${d.ratingsCount || 0} avaliações`}</small></span><span class="badge ${st[1]}">${st[0]}</span></div>
           <div class="dc-stats"><span><b>${s7.delivered}</b>entregas 7d</span><span><b>${s7.success}%</b>sucesso</span><span><b>${P.API ? s7.routes : s7.onTime + '%'}</b>${P.API ? 'rotas 7d' : 'pontual'}</span></div>
           <div class="dc-spark">${C.spark(s7.series, COLORS.blue)}</div>
           ${P.API ? `<div class="dc-veh">${ic('phone', 'sm')}<span>${esc(d.phone || 'Telefone não informado')}</span></div>` : `<div class="dc-veh">${ic('truck', 'sm')}<span>${esc(d.vehicle)}</span><span class="badge ${P.OWNERSHIP[v.ownership][1]}">${P.OWNERSHIP[v.ownership][0]}</span>${ins.phone ? '' : `<span class="badge amber" data-tip="Assistência 24h não cadastrada">${ic('alert', 'xs')}</span>`}</div>`}</a>`; }).join('')}</div>`,
@@ -816,7 +838,7 @@
     const reviews = P.S.reviews.filter(r => r.driverId === d.id);
     const lastChat = rs.find(r => r.status !== 'COMPLETED') || rs[0];
     return {
-      active: 'drivers', title: d.name, crumb: `<a href="#/drivers">Motoristas</a> / ${esc(d.name)}`,
+      active: 'drivers', title: d.name, crumb: `<a href="#/drivers">Motoristas</a> / ${esc(d.name)}`, noHead: true,
       html: `<div class="page-head"><a class="icon-btn" href="#/drivers" aria-label="Voltar">${ic('back')}</a><span class="avatar lg">${P.initials(d.name)}</span><div class="ph-main"><h2>${esc(d.name)}</h2><span class="row wrap" style="gap:6px"><span class="badge ${st[1]}">${st[0]}</span><span class="muted small">${esc(d.email)} · ${esc(d.phone)} · desde ${P.date(d.since || new Date())}</span></span></div>
         <div class="row wrap ph-actions"><button class="btn ghost" id="call">${ic('phone', 'sm')} Ligar</button>${lastChat && !P.API ? `<a class="btn ghost" href="#/messages/${lastChat.id}">${ic('chat', 'sm')} Mensagem</a>` : ''}<a class="btn primary" href="#/new">${ic('plus', 'sm')} Nova rota</a></div></div>
       <div class="kpi-grid k5">
@@ -824,7 +846,7 @@
         ${kpi({ label: 'Taxa de sucesso', icon: 'trend', color: COLORS.blue, value: s30.success + '%', sub: `${s30.skipped} puladas · ${s30.cancelled} canceladas`, href: '#/reports' })}
         ${kpi({ label: P.API ? 'Rotas · 30 dias' : 'Pontualidade', icon: 'clock', color: COLORS.violet, value: P.API ? s30.routes : s30.onTime + '%', sub: P.API ? 'criadas no período' : `${s30.routes} rotas`, href: '#/reports' })}
         ${kpi({ label: 'Distância', icon: 'route', color: COLORS.teal, value: P.num(s30.km, 0) + '<span class="of"> km</span>', sub: `${P.fmtMin(s30.minutes / Math.max(1, s30.days))} por dia`, href: '#/reports' })}
-        ${P.API ? kpi({ label: 'Rotas ativas', icon: 'route', color: '#F59E0B', value: rs.filter(x => ['ASSIGNED', 'IN_PROGRESS'].includes(x.status)).length, sub: 'atribuídas ou em andamento', href: '#/routes' }) : kpi({ label: 'Avaliação', icon: 'star', color: '#F59E0B', value: P.num(d.rating || 0, 1) + '<span class="of"> ★</span>', sub: `${d.ratingsCount || 0} avaliações`, href: '#/drivers' })}
+        ${P.API ? kpi({ label: 'Rotas ativas', icon: 'route', color: '#F59E0B', value: rs.filter(x => ['ASSIGNED', 'IN_PROGRESS'].includes(x.status)).length, sub: 'atribuídas ou em andamento', href: '#/routes' }) : kpi({ label: 'Avaliação', icon: 'star', color: '#F59E0B', value: P.num(d.rating || 0, 1) + '<span class="of"> / 5</span>', sub: `${d.ratingsCount || 0} avaliações`, href: '#/drivers' })}
       </div>
       <div class="grid g-2-1">
         <section class="card"><div class="card-head"><h3>Desempenho · 30 dias</h3></div>${C.line(hist.map(x => x.label), [{ name: 'Entregas', color: COLORS.blue, values: s30.series, area: true }], { height: 200, tipLabels: hist.map(x => `${x.wd} ${x.label}`) })}</section>
@@ -873,14 +895,13 @@
     const reasons = {}; P.S.routes.flatMap(r => r.stops).filter(s => s.reason).forEach(s => { reasons[s.reason] = (reasons[s.reason] || 0) + 1; });
     const summary = [['SOS ativos', all.filter(o => o.kind === 'SOS' && o.open).length, 'red', 'shield'], ['Revisões pedidas', all.filter(o => o.kind === 'REVIEW').length, 'violet', 'chat'], ['Atrasos e pendências', all.filter(o => ['DELAY', 'NODRIVER', 'ACK'].includes(o.kind)).length, 'amber', 'clock'], ['Paradas sem resposta', all.filter(o => ['SKIPPED', 'CANCELLED'].includes(o.kind) && o.open).length, 'neutral', 'skip']];
     return {
-      active: 'occurrences', title: 'Ocorrências', crumb: 'Tudo que precisa da sua atenção em um só lugar',
-      html: `<div class="sum-grid">${summary.map(s => `<div class="sum card"><span class="sum-ic ${s[2]}">${ic(s[3], 'sm')}</span><b>${s[1]}</b><span>${s[0]}</span></div>`).join('')}</div>
+      active: 'occurrences', title: 'Ocorrências', crumb: 'Atrasos, paradas com problema e rotas sem motorista',
+      html: `<div class="sum-grid">${summary.map(s => `<div class="sum"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('')}</div>
       <div class="grid g-2-1">
         <section><div class="toolbar"><div class="input grow">${ic('search', 'sm')}<input id="q" value="${esc(occState.q)}" placeholder="Buscar ocorrência"></div></div>
           <div class="chips">${F.map(x => `<button class="chip ${occState.f === x[0] ? 'on' : ''}" data-f="${x[0]}">${x[1]} <em>${all.filter(x[2]).length}</em></button>`).join('')}</div>
-          <div class="card pad0 occ-list">${list.length ? list.map(o => `<button class="occ" data-o="${o.id}"><span class="occ-ic ${o.tone}">${ic(o.icon, 'sm')}</span><span class="occ-main"><b>${esc(o.title)}</b><small>${esc(o.sub)}</small></span><span class="occ-end"><span class="badge ${o.open ? (o.tone === 'red' ? 'red' : 'amber') : 'green'}">${esc(o.status)}</span><small>${P.rel(o.at)}</small></span></button>`).join('') : empty('check', 'Nada por aqui', 'Nenhuma ocorrência neste filtro. 🎉')}</div></section>
-        <div class="stack"><section class="card"><div class="card-head"><h3>Motivos informados</h3><span class="muted small">dados do app</span></div>${C.hbars(Object.entries(reasons).sort((a, b) => b[1] - a[1]).map(([k, v], i) => ({ label: k, value: v, color: i === 0 ? COLORS.cancel : COLORS.skip })), { empty: 'Nenhum motivo registrado.' })}</section>
-          <section class="card"><div class="card-head"><h3>Como funciona</h3></div>${P.API ? `<ul class="howto"><li>${ic('skip', 'sm')}<span><b>Puladas e canceladas</b>: registradas pelo motorista no app, com o motivo quando informado.</span></li><li>${ic('users', 'sm')}<span><b>Rotas sem motorista</b>: atribua alguém e o app recebe na próxima atualização.</span></li><li>${ic('info', 'sm')}<span>SOS, revisões e alertas de prioridade dependem de novos recursos na Orbi API.</span></li></ul>` : `<ul class="howto"><li>${ic('shield', 'sm')}<span><b>SOS</b>: o motorista aciona no app. Ligue, acompanhe e marque como resolvido.</span></li><li>${ic('chat', 'sm')}<span><b>Revisões</b>: o motorista pede revisão de uma parada. Responda e a resposta chega no app.</span></li><li>${ic('zap', 'sm')}<span><b>Atrasos</b>: envie um alerta de prioridade, que exige “Ciente” do motorista.</span></li></ul>`}</section></div></div>`,
+          <div class="card pad0 occ-list">${list.length ? list.map(o => `<button class="occ" data-o="${o.id}"><span class="occ-ic ${o.tone}">${ic(o.icon, 'sm')}</span><span class="occ-main"><b>${esc(o.title)}</b><small>${esc(o.sub)}</small></span><span class="occ-end"><span class="badge ${o.open ? (o.tone === 'red' ? 'red' : 'amber') : 'green'}">${esc(o.status)}</span><small>${P.rel(o.at)}</small></span></button>`).join('') : empty('check', 'Nada por aqui', 'Nenhuma ocorrência neste filtro.')}</div></section>
+        <div class="stack"><section class="card"><div class="card-head"><h3>Motivos informados</h3><span class="muted small">dados do app</span></div>${C.hbars(Object.entries(reasons).sort((a, b) => b[1] - a[1]).map(([k, v], i) => ({ label: k, value: v, color: i === 0 ? COLORS.cancel : COLORS.skip })), { empty: 'Nenhum motivo registrado.' })}</section></div></div>`,
       mount(root) {
         $$('[data-f]', root).forEach(b => b.onclick = () => { occState.f = b.dataset.f; render(); });
         const q = $('#q', root); q.oninput = () => { occState.q = q.value; render(); const n = $('#q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
@@ -920,8 +941,8 @@
     ].filter(Boolean);
     return {
       active: 'reports', title: 'Relatórios', crumb: `Últimos ${repState.days} dias · ${days[0].label} a hoje`,
-      html: `<div class="toolbar"><div class="seg">${[7, 14, 30].map(n => `<button class="${repState.days === n ? 'on' : ''}" data-d="${n}">${n} dias</button>`).join('')}</div><span class="grow"></span>
-        <button class="btn ghost" id="csv">${ic('download', 'sm')} Exportar CSV</button><button class="btn primary" id="print">${ic('printer', 'sm')} Imprimir / PDF</button></div>
+      actions: `<div class="seg">${[7, 14, 30].map(n => `<button class="${repState.days === n ? 'on' : ''}" data-d="${n}">${n} dias</button>`).join('')}</div><button class="btn ghost" id="csv">${ic('download', 'sm')} Exportar CSV</button><button class="btn ghost" id="print">${ic('printer', 'sm')} Imprimir</button>`,
+      html: `
       <div class="print-head"><span class="brand-logo">${P.LOGO}</span><div><b>${esc(P.S.company.name)}</b><small>Relatório operacional · ${days[0].label} a ${P.date(Date.now())} · gerado por ${esc(P.me().name)}</small></div></div>
       <div class="kpi-grid k6">
         ${kpi({ label: 'Entregas', icon: 'check', color: COLORS.ok, value: P.num(del), sub: `${P.num(stops)} paradas`, spark: days.map(d => d.delivered) })}
@@ -931,7 +952,7 @@
         ${kpi({ label: 'Distância', icon: 'truck', color: COLORS.teal, value: P.num(kmv, 0) + '<span class="of"> km</span>', sub: `${P.num(kmv / Math.max(1, del), 1)} km por entrega` })}
         ${kpi({ label: 'Custo estimado', icon: 'wallet', color: COLORS.skip, value: P.money(cost), sub: `${P.money(cost / Math.max(1, del))} por entrega` })}
       </div>
-      <section class="card insights"><div class="card-head"><h3>${ic('sparkle', 'sm')} Destaques automáticos</h3><span class="muted small">gerados a partir dos dados</span></div><ul>${insights.map(i => `<li>${i}</li>`).join('')}</ul></section>
+      <section class="card insights"><div class="card-head"><h3>Resumo do período</h3></div><ul>${insights.map(i => `<li>${i}</li>`).join('')}</ul></section>
       <div class="grid g-2-1">
         <section class="card"><div class="card-head"><h3>Entregas por dia</h3></div>${C.stacked(days.map(d => d.label), [{ name: 'Entregues', color: COLORS.ok, values: days.map(d => d.delivered) }, { name: 'Puladas', color: COLORS.skip, values: days.map(d => d.skipped) }, { name: 'Canceladas', color: COLORS.cancel, values: days.map(d => d.cancelled) }], { highlightLast: true, tipLabels: days.map(d => `${d.wd} ${d.label}`) })}
           <div class="legend-row"><span><i style="background:${COLORS.ok}"></i>Entregues</span><span><i style="background:${COLORS.skip}"></i>Puladas</span><span><i style="background:${COLORS.cancel}"></i>Canceladas</span></div></section>
@@ -942,7 +963,7 @@
       <section class="card pad0"><div class="card-head pad"><h3>Desempenho por motorista</h3><span class="muted small">período selecionado, sem o dia de hoje</span></div>
         <table class="tbl"><thead><tr><th>Motorista</th><th>Rotas</th><th>Entregas</th><th>Sucesso</th>${P.API ? '' : '<th>Pontualidade</th>'}<th>Km</th><th>Custo/entrega</th>${P.API ? '' : '<th>Avaliação</th>'}</tr></thead><tbody>
         ${drows.map(x => `<tr data-href="#/driver/${x.d.id}"><td data-l="Motorista"><span class="who"><span class="avatar xs">${P.initials(x.d.name)}</span>${esc(x.d.name)}</span></td><td data-l="Rotas">${x.routes}</td><td data-l="Entregas">${x.delivered}</td>
-          <td data-l="Sucesso"><span class="prog-cell">${progress(x.success, x.success >= goals.successRate ? 'green' : 'amber')}<small>${x.success}%</small></span></td>${P.API ? '' : `<td data-l="Pontualidade">${x.onTime}%</td>`}<td data-l="Km">${P.num(x.km, 0)}</td><td data-l="Custo/entrega">${P.money((x.km * 1.85 + x.stops * 2.5) / Math.max(1, x.delivered))}</td>${P.API ? '' : `<td data-l="Avaliação">★ ${P.num(x.rating, 1)}</td>`}</tr>`).join('')}</tbody></table></section>
+          <td data-l="Sucesso"><span class="prog-cell">${progress(x.success, x.success >= goals.successRate ? 'green' : 'amber')}<small>${x.success}%</small></span></td>${P.API ? '' : `<td data-l="Pontualidade">${x.onTime}%</td>`}<td data-l="Km">${P.num(x.km, 0)}</td><td data-l="Custo/entrega">${P.money((x.km * 1.85 + x.stops * 2.5) / Math.max(1, x.delivered))}</td>${P.API ? '' : `<td data-l="Avaliação">${P.num(x.rating, 1)}</td>`}</tr>`).join('')}</tbody></table></section>
       <p class="muted small center" style="margin:16px 0 4px">${P.API ? 'Dados reais da Orbi API (os mesmos do app do motorista). Distâncias estimadas pelas coordenadas das entregas.' : 'Dias anteriores: histórico simulado para demonstração. Hoje: dados reais do app.'}</p>`,
       mount(root) {
         $$('[data-d]', root).forEach(b => b.onclick = () => { repState.days = +b.dataset.d; render(); });
@@ -1080,7 +1101,7 @@
     const pg = fn({ id: rt.id });
     current = rt;
     const scrollY = ($('#page') || {}).scrollTop || 0;
-    app.innerHTML = pg.bare ? pg.html : layout(pg.active, pg.title, pg.html, { crumb: pg.crumb });
+    app.innerHTML = pg.bare ? pg.html : layout(pg.active, pg.title, pg.html, { crumb: pg.crumb, actions: pg.actions, noHead: pg.noHead });
     document.title = `${pg.title || 'Entrar'} · Orbi Portal`;
     if (!pg.bare) bindLayout(app);
     if (pg.mount) cleanup = pg.mount(app) || null;
@@ -1110,6 +1131,14 @@
     render();
   });
   setInterval(() => { if (pendingSync && !document.querySelector('.layer')) { pendingSync = false; render(); } }, 1500);
+  // aviso de sessão perto de expirar (modo API)
+  setInterval(() => {
+    if (!P.API || !P.me()) return;
+    const main = $('.main'); if (!main) return;
+    const old = $('#sessBanner'); const html = sessBannerHtml();
+    if (old) { if (html) old.outerHTML = html; else old.remove(); } else if (html) $('#page').insertAdjacentHTML('beforebegin', html);
+    const rl = $('#reLogin'); if (rl) rl.onclick = () => { P.setSession(null); go('#/login'); };
+  }, 20000);
   // atualização periódica leve (horários relativos, atrasos)
   setInterval(() => { if (!P.API && P.me() && !document.querySelector('.layer') && current && ['overview', 'occurrences', 'routes'].includes(current.name) && !/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) { P.reload(); render(); } }, 60000);
 

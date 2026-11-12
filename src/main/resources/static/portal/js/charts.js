@@ -62,9 +62,9 @@
     let acc = 0; const R = 42, L = 2 * Math.PI * R;
     const arcs = segs.map(s => {
       const len = s.value / total * L; const off = -acc; acc += len;
-      return `<circle r="${R}" cx="50" cy="50" fill="none" stroke="${s.color}" stroke-width="13" stroke-dasharray="${len} ${L - len}" stroke-dashoffset="${off}" transform="rotate(-90 50 50)" ${tip(`<b>${esc(s.label)}</b><div>${P.num(s.value)} · ${P.pct(s.value, total)}%</div>`)}/>`;
+      return `<circle r="${R}" cx="50" cy="50" fill="none" stroke="${s.color}" stroke-width="9" stroke-dasharray="${len} ${L - len}" stroke-dashoffset="${off}" transform="rotate(-90 50 50)" ${tip(`<b>${esc(s.label)}</b><div>${P.num(s.value)} · ${P.pct(s.value, total)}%</div>`)}/>`;
     }).join('');
-    return `<div class="donut"><div class="donut-ring"><svg viewBox="0 0 100 100"><circle r="${R}" cx="50" cy="50" fill="none" stroke="var(--line)" stroke-width="13"/>${arcs}</svg>
+    return `<div class="donut"><div class="donut-ring"><svg viewBox="0 0 100 100"><circle r="${R}" cx="50" cy="50" fill="none" stroke="var(--line)" stroke-width="9"/>${arcs}</svg>
       <div class="donut-c"><b>${center}</b><span>${sub || ''}</span></div></div>
       <ul class="legend">${segs.map(s => `<li ${tip(`<b>${esc(s.label)}</b><div>${P.num(s.value)} · ${P.pct(s.value, total)}%</div>`)}><i style="background:${s.color}"></i><span>${esc(s.label)}</span><b>${P.num(s.value)}</b><em>${P.pct(s.value, total)}%</em></li>`).join('')}</ul></div>`;
   };
