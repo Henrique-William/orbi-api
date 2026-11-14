@@ -151,7 +151,7 @@ class DeliveryControllerTest {
 
         when(deliveryRepository.findByRouteId(10L)).thenReturn(List.of(cancelledDelivery));
 
-        ResponseEntity<Void> response = deliveryController.cancelDelivery(1L, authentication);
+        ResponseEntity<Void> response = deliveryController.cancelDelivery(1L, null, authentication);
 
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
         assertEquals(DeliveryStatus.CANCELLED, delivery.getStatus());
@@ -166,7 +166,7 @@ class DeliveryControllerTest {
         when(deliveryRepository.findById(1L)).thenReturn(Optional.of(delivery));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> deliveryController.cancelDelivery(1L, authentication));
+                () -> deliveryController.cancelDelivery(1L, null, authentication));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
@@ -194,7 +194,7 @@ class DeliveryControllerTest {
         Authentication adminAuth = mock(Authentication.class);
         doReturn(List.of(new SimpleGrantedAuthority("SCOPE_ADMIN"))).when(adminAuth).getAuthorities();
 
-        ResponseEntity<Void> response = deliveryController.cancelDelivery(1L, adminAuth);
+        ResponseEntity<Void> response = deliveryController.cancelDelivery(1L, null, adminAuth);
 
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
         assertEquals(DeliveryStatus.CANCELLED, delivery.getStatus());
