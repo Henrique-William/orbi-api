@@ -1,5 +1,7 @@
 package com.tech.orbi.benchmark;
 
+import java.io.File;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -17,6 +19,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Bateria Científica Multi-Cenários Calibrada pelas Médias Reais do Mercado Logístico (IC - Ecossistema Orbi).
@@ -51,11 +55,25 @@ public class OrbiTspBenchmark {
     private int orsDirectionsRequestsCount = 0;
     private final Map<String, Double> orsRouteSurfaceCache = new HashMap<>();
 
+    private static String configuredExternalJsonPath = null;
+
+    public static void setExternalJsonPath(String path) {
+        configuredExternalJsonPath = path;
+    }
+
     public static void main(String[] args) {
-        new OrbiTspBenchmark().executeFullBenchmark();
+        String externalJson = (args != null && args.length > 0) ? args[0] : null;
+        new OrbiTspBenchmark().executeFullBenchmark(externalJson);
     }
 
     public void executeFullBenchmark() {
+        executeFullBenchmark(null);
+    }
+
+    public void executeFullBenchmark(String externalJsonPath) {
+        if (externalJsonPath != null && !externalJsonPath.isBlank()) {
+            configuredExternalJsonPath = externalJsonPath;
+        }
         printBanner();
 
         String googleApiKey = resolveKey("GOOGLE_API_KEY", DEFAULT_GOOGLE_API_KEY);
@@ -1295,7 +1313,88 @@ public class OrbiTspBenchmark {
         return getCampinasMasterPool110().subList(0, 35);
     }
 
+    private List<StopPoint> loadStopsFromJsonFile(String path) {
+        if (path == null || path.isBlank()) return null;
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            List<Map<String, Object>> rawList = null;
+
+            File f = new File(path);
+            if (f.exists()) {
+                rawList = mapper.readValue(f, new TypeReference<List<Map<String, Object>>>() {});
+            } else {
+                InputStream is1 = getClass().getClassLoader().getResourceAsStream(path);
+                if (is1 == null && !path.startsWith("scenarios/")) {
+                    is1 = getClass().getClassLoader().getResourceAsStream("scenarios/" + path);
+                }
+                if (is1 != null) {
+                    try (InputStream stream = is1) {
+                        rawList = mapper.readValue(stream, new TypeReference<List<Map<String, Object>>>() {});
+                    }
+                }
+            }
+
+            if (rawList != null && !rawList.isEmpty()) {
+                List<StopPoint> points = new ArrayList<>();
+                for (int i = 0; i < rawList.size(); i++) {
+                    Map<String, Object> m = rawList.get(i);
+                    int id = m.containsKey("id") ? ((Number) m.get("id")).intValue() : i;
+                    String address = m.getOrDefault("address", m.getOrDefault("name", "Ponto " + id)).toString();
+                    double lat = ((Number) m.getOrDefault("latitude", 0.0)).doubleValue();
+                    double lng = ((Number) m.getOrDefault("longitude", 0.0)).doubleValue();
+                    String formatted = m.getOrDefault("formattedAddress", address).toString();
+                    double surf = m.containsKey("characteristicSurfaceFactor") ? ((Number) m.get("characteristicSurfaceFactor")).doubleValue() : 1.0;
+                    boolean cached = m.containsKey("cachedFromGoogle") ? (Boolean) m.get("cachedFromGoogle") : (lat != 0.0 && lng != 0.0);
+                    points.add(new StopPoint(id, address, lat, lng, formatted, surf, cached));
+                }
+                System.out.printf("  [JSON CARREGADO] %,d pontos carregados com sucesso: %s%n", points.size(), path);
+                return points;
+            }
+        } catch (Exception e) {
+            System.err.println("  [AVISO] Falha ao ler arquivo JSON '" + path + "': " + e.getMessage());
+        }
+        return null;
+    }
+
+    public List<StopPoint> loadScenarioStops(String scenarioCode) {
+        String clean = scenarioCode.trim().toLowerCase();
+        String[] candidates = {
+            clean + ".json",
+            "scenarios/" + clean + ".json",
+            "src/main/resources/scenarios/" + clean + ".json",
+            "src/test/resources/scenarios/" + clean + ".json",
+            "cenarios/" + clean + ".json"
+        };
+        for (String c : candidates) {
+            List<StopPoint> points = loadStopsFromJsonFile(c);
+            if (points != null && !points.isEmpty()) return points;
+        }
+        return null;
+    }
+
     private List<StopPoint> getCampinasMasterPool110() {
+        // 1. Tentar caminho configurado via parâmetro/CLI
+        if (configuredExternalJsonPath != null && !configuredExternalJsonPath.isBlank()) {
+            List<StopPoint> loaded = loadStopsFromJsonFile(configuredExternalJsonPath);
+            if (loaded != null && !loaded.isEmpty()) return loaded;
+        }
+        // 2. Tentar propriedade de sistema ou variável de ambiente
+        String envPath = System.getProperty("benchmark.addresses.file", System.getenv("BENCHMARK_ADDRESSES_FILE"));
+        if (envPath != null && !envPath.isBlank()) {
+            List<StopPoint> loaded = loadStopsFromJsonFile(envPath);
+            if (loaded != null && !loaded.isEmpty()) return loaded;
+        }
+        // 3. Tentar carregar de arquivo JSON local relativo
+        String[] localCandidates = {
+            "src/main/resources/benchmark_addresses.json",
+            "src/test/resources/benchmark_addresses.json",
+            "benchmark_addresses.json"
+        };
+        for (String candidate : localCandidates) {
+            List<StopPoint> loaded = loadStopsFromJsonFile(candidate);
+            if (loaded != null && !loaded.isEmpty()) return loaded;
+        }
+
         return List.of(
                 // --- Polos Urbanos Centrais & Cambuí (IDs 0..11 -> C1 Carga Pesada B2B N=12) ---
                 new StopPoint(0,  "Av. Francisco Glicério",       -22.904287, -47.060046, "Av. Francisco Glicério - Centro, Campinas - SP", 1.00, true),
