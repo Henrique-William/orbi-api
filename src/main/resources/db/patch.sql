@@ -88,14 +88,18 @@ CREATE TABLE IF NOT EXISTS benchmark (
     algorithm_name VARCHAR(100) NOT NULL,
     algorithm_type VARCHAR(100) NULL,
     complexity VARCHAR(60) NULL,
-    execution_time_ms DOUBLE NOT NULL,
-    total_distance_km DOUBLE NOT NULL,
-    total_duration_min DOUBLE NOT NULL,
-    total_cost DOUBLE NOT NULL,
-    avg_surface_factor DOUBLE NOT NULL,
+    is_valid BOOLEAN NOT NULL DEFAULT TRUE,
+    status VARCHAR(30) NOT NULL DEFAULT 'VALID',
+    invalid_reason TEXT NULL,
+    execution_time_ms DOUBLE NULL,
+    total_distance_km DOUBLE NULL,
+    total_duration_min DOUBLE NULL,
+    total_cost DOUBLE NULL,
+    avg_surface_factor DOUBLE NULL,
     efficiency_gain_pct DOUBLE NULL,
-    initial_duration_min DOUBLE NOT NULL,
-    initial_distance_km DOUBLE NOT NULL,
+    optimality_gap_pct DOUBLE NULL,
+    initial_duration_min DOUBLE NULL,
+    initial_distance_km DOUBLE NULL,
     tour_order_json TEXT NULL,
     route_coordinates_json LONGTEXT NULL,
     notes TEXT NULL,
@@ -110,4 +114,13 @@ CREATE TABLE IF NOT EXISTS benchmark (
 -- Garante colunas em bancos existentes
 ALTER TABLE benchmark ADD COLUMN IF NOT EXISTS batch_id VARCHAR(64) NULL;
 ALTER TABLE benchmark ADD COLUMN IF NOT EXISTS scenario_code VARCHAR(20) NULL;
+ALTER TABLE benchmark ADD COLUMN IF NOT EXISTS optimality_gap_pct DOUBLE NULL;
+ALTER TABLE benchmark ADD COLUMN IF NOT EXISTS is_valid BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE benchmark ADD COLUMN IF NOT EXISTS status VARCHAR(30) NOT NULL DEFAULT 'VALID';
+ALTER TABLE benchmark ADD COLUMN IF NOT EXISTS invalid_reason TEXT NULL;
+ALTER TABLE benchmark MODIFY COLUMN execution_time_ms DOUBLE NULL;
+ALTER TABLE benchmark MODIFY COLUMN total_distance_km DOUBLE NULL;
+ALTER TABLE benchmark MODIFY COLUMN total_duration_min DOUBLE NULL;
+ALTER TABLE benchmark MODIFY COLUMN total_cost DOUBLE NULL;
+ALTER TABLE benchmark MODIFY COLUMN avg_surface_factor DOUBLE NULL;
 

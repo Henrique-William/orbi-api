@@ -47,27 +47,43 @@ public class Benchmark {
     @Column(name = "complexity", length = 60)
     private String complexity;
 
+    @Column(name = "is_valid", nullable = false)
+    private Boolean isValid = true;
+
+    @Column(name = "status", nullable = false, length = 30)
+    private String status = "VALID";
+
+    @Column(name = "invalid_reason", columnDefinition = "TEXT")
+    private String invalidReason;
+
     /**
      * Tempo de computação puro do algoritmo em milissegundos.
-     * NÃO inclui tempo de gravação no banco, consultas ou operações de rede.
+     * Nulo caso o algoritmo tenha sido invalidado por estouro de memória ou tempo.
      */
-    @Column(name = "execution_time_ms", nullable = false)
+    @Column(name = "execution_time_ms")
     private Double executionTimeMs;
 
-    @Column(name = "total_distance_km", nullable = false)
+    @Column(name = "total_distance_km")
     private Double totalDistanceKm;
 
-    @Column(name = "total_duration_min", nullable = false)
+    @Column(name = "total_duration_min")
     private Double totalDurationMin;
 
-    @Column(name = "total_cost", nullable = false)
+    @Column(name = "total_cost")
     private Double totalCost;
 
-    @Column(name = "avg_surface_factor", nullable = false)
+    @Column(name = "avg_surface_factor")
     private Double avgSurfaceFactor;
 
     @Column(name = "efficiency_gain_pct")
     private Double efficiencyGainPct;
+
+    /**
+     * Gap de otimalidade em relação à melhor solução ou ótimo exato (Z*).
+     * Fórmula: ((Z_alg - Z*) / Z*) * 100%
+     */
+    @Column(name = "optimality_gap_pct")
+    private Double optimalityGapPct;
 
     /**
      * Tempo da rota inicial na ordem de cadastro (Sem otimização) em minutos.

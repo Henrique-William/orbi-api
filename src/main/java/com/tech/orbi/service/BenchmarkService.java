@@ -209,47 +209,80 @@ public class BenchmarkService {
                 "Ordem sequencial original de entrada sem qualquer otimização viária"
         ));
 
-        // --- GRUPO 1: MÉTODOS EXATOS ---
+        // --- GRUPO 1: MÉTODOS EXATOS E PROTEÇÃO OPERACIONAL ---
         boolean includeExact = request == null || request.includeExactMethods() == null || Boolean.TRUE.equals(request.includeExactMethods());
 
-        // Branch-and-Bound (DFS) para N <= 12
-        if (includeExact && targetN <= 12) {
+        if (includeExact) {
+            // 1. Branch-and-Bound (DFS) com salvaguarda de truncamento seguro em 3.000.000 nós
             long t0 = System.nanoTime();
             ExactResult bb = solveBranchAndBound(matrices.weightedCost, 0);
             long elapsed = System.nanoTime() - t0;
             double ms = elapsed / 1_000_000.0;
 
+            boolean isTruncated = bb.truncated();
+            String status = isTruncated ? "TRUNCATED" : "VALID";
+            String invalidReason = isTruncated
+                    ? String.format(Locale.US, "Busca exata incompleta: truncada por estouro de limite de nós (%,d nós)", bb.nodesVisited())
+                    : null;
+            String notes = isTruncated
+                    ? String.format(Locale.US, "*Truncado em %,d nós visitados devido à explosão fatorial (O((n-1)!))", bb.nodesVisited())
+                    : String.format(Locale.US, "Ótimo exato alcançado (%,d nós visitados | %,d podas)", bb.nodesVisited(), bb.branchesPruned());
+
             evaluations.add(new AlgorithmEvaluation(
                     "1. Branch-and-Bound (DFS)",
-                    "Exato",
+                    isTruncated ? "Exato (Truncado)" : "Exato",
                     "O((n-1)!)",
+                    true,
+                    status,
+                    invalidReason,
                     ms,
-                    bb.tour,
-                    tourDistance(bb.tour, matrices.distanceKm),
-                    tourDuration(bb.tour, matrices.durationMin, dwellTimePerStopMin),
-                    tourWeightedCost(bb.tour, matrices.weightedCost),
-                    String.format(Locale.US, "Ótimo exato alcançado (%,d nós visitados | %,d podas)", bb.nodesVisited, bb.branchesPruned)
+                    bb.tour(),
+                    tourDistance(bb.tour(), matrices.distanceKm),
+                    tourDuration(bb.tour(), matrices.durationMin, dwellTimePerStopMin),
+                    tourWeightedCost(bb.tour(), matrices.weightedCost),
+                    notes
             ));
-        }
 
-        // Bellman-Held-Karp (Prog. Dinâmica) para N <= 18
-        if (includeExact && targetN <= 18) {
-            long t0 = System.nanoTime();
-            int[] hkTour = solveHeldKarp(matrices.weightedCost, 0);
-            long elapsed = System.nanoTime() - t0;
-            double ms = elapsed / 1_000_000.0;
+            // 2. Bellman-Held-Karp (Prog. Dinâmica) com salvaguarda de proteção operacional contra colapso de memória
+            if (targetN <= 18) {
+                long t0Hk = System.nanoTime();
+                int[] hkTour = solveHeldKarp(matrices.weightedCost, 0);
+                long elapsedHk = System.nanoTime() - t0Hk;
+                double msHk = elapsedHk / 1_000_000.0;
 
-            evaluations.add(new AlgorithmEvaluation(
-                    "2. Bellman-Held-Karp (Prog. Dinâmica)",
-                    "Exato",
-                    "O(n^2 * 2^n)",
-                    ms,
-                    hkTour,
-                    tourDistance(hkTour, matrices.distanceKm),
-                    tourDuration(hkTour, matrices.durationMin, dwellTimePerStopMin),
-                    tourWeightedCost(hkTour, matrices.weightedCost),
-                    String.format(Locale.US, "Ótimo global garantido matematicamente (%,d estados DP)", (1L << (targetN - 1)) * targetN)
-            ));
+                evaluations.add(new AlgorithmEvaluation(
+                        "2. Bellman-Held-Karp (Prog. Dinâmica)",
+                        "Exato",
+                        "O(n^2 * 2^n)",
+                        msHk,
+                        hkTour,
+                        tourDistance(hkTour, matrices.distanceKm),
+                        tourDuration(hkTour, matrices.durationMin, dwellTimePerStopMin),
+                        tourWeightedCost(hkTour, matrices.weightedCost),
+                        String.format(Locale.US, "Ótimo global garantido matematicamente (%,d estados DP)", (1L << (targetN - 1)) * targetN)
+                ));
+            } else {
+                // Salvaguarda de Proteção Operacional contra Colapso Teórico de RAM (O(n * 2^n))
+                // Invalida o resultado pois a memória RAM estoura a capacidade física do sistema
+                double ramGb = ((double) targetN * Math.pow(2.0, targetN - 1) * 12.0) / (1024.0 * 1024.0 * 1024.0);
+                String ramDesc = (ramGb >= 1024.0 * 1024.0)
+                        ? String.format(Locale.US, "%.1e GB RAM", ramGb)
+                        : (ramGb >= 1024.0)
+                        ? String.format(Locale.US, "%.1f TB RAM", ramGb / 1024.0)
+                        : String.format(Locale.US, "%.1f GB RAM", ramGb);
+
+                String hkInvalidReason = String.format(Locale.US, "Estouro de capacidade de memória RAM teórica (exigiria %s em bitmask DP O(n^2 * 2^n))", ramDesc);
+                String hkNotes = String.format(Locale.US, "INVALIDADO: Estouro de RAM (%s teóricos). Proteção operacional ativada contra OOM.", ramDesc);
+
+                evaluations.add(AlgorithmEvaluation.invalid(
+                        "2. Bellman-Held-Karp (Prog. Dinâmica)",
+                        "Exato (Proteção Operacional)",
+                        "O(n^2 * 2^n)",
+                        "INVALID_MEMORY_LIMIT",
+                        hkInvalidReason,
+                        hkNotes
+                ));
+            }
         }
 
         // --- GRUPO 2: HEURÍSTICAS CONSTRUTIVAS E HÍBRIDAS ---
@@ -403,26 +436,39 @@ public class BenchmarkService {
         List<BenchmarkResultDto> resultDtos = new ArrayList<>();
 
         AlgorithmEvaluation winnerEval = evaluations.stream()
-                .filter(ev -> !ev.algorithmName().contains("Baseline"))
+                .filter(ev -> ev.isValid() && !ev.algorithmName().contains("Baseline") && ev.weightedCost() != null && ev.weightedCost() > 0)
                 .min((a, b) -> comparePerformance(
                         a.algorithmName(), a.weightedCost(), a.distanceKm(), a.executionTimeMs(),
                         b.algorithmName(), b.weightedCost(), b.distanceKm(), b.executionTimeMs()
                 ))
                 .orElse(evaluations.get(0));
 
-        double bestDistance = winnerEval.distanceKm();
-        double bestDuration = winnerEval.durationMin();
+        double bestDistance = winnerEval.distanceKm() != null ? winnerEval.distanceKm() : 0.0;
+        double bestDuration = winnerEval.durationMin() != null ? winnerEval.durationMin() : 0.0;
         String bestAlgorithm = winnerEval.algorithmName();
+        double referenceBestCost = winnerEval.weightedCost() != null ? winnerEval.weightedCost() : 0.0;
 
         for (AlgorithmEvaluation ev : evaluations) {
-            double efficiencyGain = initialDistanceKm > 0
-                    ? ((initialDistanceKm - ev.distanceKm) / initialDistanceKm) * 100.0
-                    : 0.0;
+            Double efficiencyGain = null;
+            Double avgSurface = null;
+            Double optimalityGap = null;
 
-            double avgSurface = ev.distanceKm > 0 ? (ev.weightedCost / ev.distanceKm) : 1.0;
+            if (ev.isValid() && ev.distanceKm() != null && ev.distanceKm() > 0) {
+                if (initialDistanceKm > 0) {
+                    efficiencyGain = ((initialDistanceKm - ev.distanceKm()) / initialDistanceKm) * 100.0;
+                }
+                avgSurface = (ev.weightedCost() != null && ev.weightedCost() > 0) ? (ev.weightedCost() / ev.distanceKm()) : 1.0;
+                if (ev.weightedCost() != null && referenceBestCost > 0) {
+                    optimalityGap = Math.max(0.0, ((ev.weightedCost() - referenceBestCost) / referenceBestCost) * 100.0);
+                }
+            } else if (ev.algorithmName().contains("Baseline") && referenceBestCost > 0 && initialWeightedCost > 0) {
+                efficiencyGain = 0.0;
+                avgSurface = initialDistanceKm > 0 ? (initialWeightedCost / initialDistanceKm) : 1.0;
+                optimalityGap = Math.max(0.0, ((initialWeightedCost - referenceBestCost) / referenceBestCost) * 100.0);
+            }
 
-            String tourOrderJson = serializeIntArray(ev.tour);
-            String coordinatesJson = buildRouteCoordinatesJson(ev.tour, stops);
+            String tourOrderJson = serializeIntArray(ev.tour());
+            String coordinatesJson = buildRouteCoordinatesJson(ev.tour(), stops);
 
             Benchmark entity = new Benchmark();
             entity.setSessionId(sessionId);
@@ -431,20 +477,24 @@ public class BenchmarkService {
             entity.setScenarioName(scenarioName);
             entity.setScenarioDescription(scenarioDescription);
             entity.setStopsCount(targetN);
-            entity.setAlgorithmName(ev.algorithmName);
-            entity.setAlgorithmType(ev.algorithmType);
-            entity.setComplexity(ev.complexity);
-            entity.setExecutionTimeMs(ev.executionTimeMs);
-            entity.setTotalDistanceKm(ev.distanceKm);
-            entity.setTotalDurationMin(ev.durationMin);
-            entity.setTotalCost(ev.weightedCost);
+            entity.setAlgorithmName(ev.algorithmName());
+            entity.setAlgorithmType(ev.algorithmType());
+            entity.setComplexity(ev.complexity());
+            entity.setIsValid(ev.isValid());
+            entity.setStatus(ev.status());
+            entity.setInvalidReason(ev.invalidReason());
+            entity.setExecutionTimeMs(ev.executionTimeMs());
+            entity.setTotalDistanceKm(ev.distanceKm());
+            entity.setTotalDurationMin(ev.durationMin());
+            entity.setTotalCost(ev.weightedCost());
             entity.setAvgSurfaceFactor(avgSurface);
             entity.setEfficiencyGainPct(efficiencyGain);
+            entity.setOptimalityGapPct(optimalityGap);
             entity.setInitialDurationMin(initialDurationMin);
             entity.setInitialDistanceKm(initialDistanceKm);
             entity.setTourOrderJson(tourOrderJson);
             entity.setRouteCoordinatesJson(coordinatesJson);
-            entity.setNotes(ev.notes);
+            entity.setNotes(ev.notes());
             entity.setCreatedAt(sessionCreatedAt);
 
             entitiesToSave.add(entity);
@@ -468,20 +518,24 @@ public class BenchmarkService {
                     scenarioName,
                     scenarioDescription,
                     targetN,
-                    ev.algorithmName,
-                    ev.algorithmType,
-                    ev.complexity,
-                    ev.executionTimeMs,
-                    ev.distanceKm,
-                    ev.durationMin,
-                    ev.weightedCost,
-                    ev.distanceKm > 0 ? (ev.weightedCost / ev.distanceKm) : 1.0,
-                    initialDistanceKm > 0 ? ((initialDistanceKm - ev.distanceKm) / initialDistanceKm) * 100.0 : 0.0,
+                    ev.algorithmName(),
+                    ev.algorithmType(),
+                    ev.complexity(),
+                    entity.getIsValid(),
+                    entity.getStatus(),
+                    entity.getInvalidReason(),
+                    entity.getExecutionTimeMs(),
+                    entity.getTotalDistanceKm(),
+                    entity.getTotalDurationMin(),
+                    entity.getTotalCost(),
+                    entity.getAvgSurfaceFactor(),
+                    entity.getEfficiencyGainPct(),
+                    entity.getOptimalityGapPct(),
                     initialDurationMin,
                     initialDistanceKm,
                     entity.getTourOrderJson(),
                     entity.getRouteCoordinatesJson(),
-                    ev.notes,
+                    ev.notes(),
                     sessionCreatedAt
             ));
         }
@@ -638,12 +692,16 @@ public class BenchmarkService {
                 r.getAlgorithmName(),
                 r.getAlgorithmType(),
                 r.getComplexity(),
+                Boolean.TRUE.equals(r.getIsValid()),
+                r.getStatus() != null ? r.getStatus() : (Boolean.TRUE.equals(r.getIsValid()) ? "VALID" : "INVALID"),
+                r.getInvalidReason(),
                 r.getExecutionTimeMs(),
                 r.getTotalDistanceKm(),
                 r.getTotalDurationMin(),
                 r.getTotalCost(),
                 r.getAvgSurfaceFactor(),
                 r.getEfficiencyGainPct(),
+                r.getOptimalityGapPct(),
                 r.getInitialDurationMin(),
                 r.getInitialDistanceKm(),
                 r.getTourOrderJson(),
@@ -653,18 +711,18 @@ public class BenchmarkService {
         )).toList();
 
         Benchmark winnerRecord = records.stream()
-                .filter(r -> !r.getAlgorithmName().contains("Baseline"))
+                .filter(r -> Boolean.TRUE.equals(r.getIsValid()) && !r.getAlgorithmName().contains("Baseline") && r.getTotalCost() != null && r.getTotalCost() > 0)
                 .min((a, b) -> comparePerformance(
                         a.getAlgorithmName(), a.getTotalCost(), a.getTotalDistanceKm(), a.getExecutionTimeMs(),
                         b.getAlgorithmName(), b.getTotalCost(), b.getTotalDistanceKm(), b.getExecutionTimeMs()
                 ))
                 .orElse(first);
 
-        double bestDist = winnerRecord.getTotalDistanceKm();
-        double bestDur = winnerRecord.getTotalDurationMin();
+        double bestDist = winnerRecord.getTotalDistanceKm() != null ? winnerRecord.getTotalDistanceKm() : 0.0;
+        double bestDur = winnerRecord.getTotalDurationMin() != null ? winnerRecord.getTotalDurationMin() : 0.0;
         String bestAlgo = winnerRecord.getAlgorithmName();
 
-        double maxSav = first.getInitialDistanceKm() > 0
+        double maxSav = first.getInitialDistanceKm() != null && first.getInitialDistanceKm() > 0 && bestDist > 0
                 ? ((first.getInitialDistanceKm() - bestDist) / first.getInitialDistanceKm()) * 100.0
                 : 0.0;
 
@@ -693,9 +751,16 @@ public class BenchmarkService {
     }
 
     private int comparePerformance(
-            String nameA, double costA, double distA, double cpuMsA,
-            String nameB, double costB, double distB, double cpuMsB
+            String nameA, Double costA, Double distA, Double cpuMsA,
+            String nameB, Double costB, Double distB, Double cpuMsB
     ) {
+        if (costA == null && costB == null) return 0;
+        if (costA == null) return 1;
+        if (costB == null) return -1;
+        if (distA == null && distB == null) return 0;
+        if (distA == null) return 1;
+        if (distB == null) return -1;
+
         if (Math.abs(costA - costB) > 1e-3) {
             return Double.compare(costA, costB);
         }
@@ -707,7 +772,9 @@ public class BenchmarkService {
         if (aOrbi != bOrbi) {
             return aOrbi ? -1 : 1;
         }
-        return Double.compare(cpuMsA, cpuMsB);
+        double cA = cpuMsA != null ? cpuMsA : Double.MAX_VALUE;
+        double cB = cpuMsB != null ? cpuMsB : Double.MAX_VALUE;
+        return Double.compare(cA, cB);
     }
 
     @Transactional(readOnly = true)
@@ -755,7 +822,7 @@ public class BenchmarkService {
                     def.filePath,
                     def.stops,
                     def.dwellTime,
-                    def.stops <= 18,
+                    true,
                     true,
                     false,
                     batchId,
@@ -1116,31 +1183,50 @@ public class BenchmarkService {
     // NÚCLEO DOS ALGORITMOS (MEDIDOS PURAMENTE)
     // =========================================================================
 
-    // 1. Branch and Bound DFS
-    private record ExactResult(int[] tour, long nodesVisited, long branchesPruned) {}
+    // 1. Branch and Bound DFS com truncamento seguro (3.000.000 nós)
+    private static final long MAX_BRANCH_AND_BOUND_NODES = 3_000_000L;
+
+    private record ExactResult(int[] tour, long nodesVisited, long branchesPruned, boolean truncated) {}
 
     private ExactResult solveBranchAndBound(double[][] cost, int start) {
         int n = cost.length;
         int[] bestTour = new int[n];
-        double[] bestCost = { Double.POSITIVE_INFINITY };
+        int[] initialTour = solveNearestNeighbor(cost, start);
+        double[] bestCost = { tourWeightedCost(initialTour, cost) };
+        System.arraycopy(initialTour, 0, bestTour, 0, n);
+
+        // Pré-computa menor aresta de saída para cada vértice (limite inferior O(1) na DFS)
+        double[] minOut = new double[n];
+        for (int i = 0; i < n; i++) {
+            double m = Double.POSITIVE_INFINITY;
+            for (int j = 0; j < n; j++) {
+                if (i != j) m = Math.min(m, cost[i][j]);
+            }
+            minOut[i] = m;
+        }
+
         long[] nodes = { 0L };
         long[] pruned = { 0L };
+        boolean[] truncated = { false };
 
         boolean[] visited = new boolean[n];
         int[] currentTour = new int[n];
         currentTour[0] = start;
         visited[start] = true;
 
-        bbDfs(cost, 1, start, 0.0, currentTour, visited, bestTour, bestCost, nodes, pruned);
+        bbDfs(cost, minOut, 1, start, 0.0, currentTour, visited, bestTour, bestCost, nodes, pruned, truncated);
 
-        return new ExactResult(bestTour, nodes[0], pruned[0]);
+        return new ExactResult(bestTour, nodes[0], pruned[0], truncated[0]);
     }
 
-    private void bbDfs(double[][] cost, int count, int current, double currentCost,
+    private void bbDfs(double[][] cost, double[] minOut, int count, int current, double currentCost,
                        int[] currentTour, boolean[] visited, int[] bestTour, double[] bestCost,
-                       long[] nodes, long[] pruned) {
+                       long[] nodes, long[] pruned, boolean[] truncated) {
         nodes[0]++;
-        if (nodes[0] > 1_500_000L) return; // limite de segurança
+        if (nodes[0] >= MAX_BRANCH_AND_BOUND_NODES) {
+            truncated[0] = true;
+            return;
+        }
 
         int n = cost.length;
         if (count == n) {
@@ -1152,31 +1238,18 @@ public class BenchmarkService {
             return;
         }
 
-        double lb = currentCost;
-        for (int i = 0; i < n; i++) {
-            if (!visited[i]) {
-                double minEdge = Double.POSITIVE_INFINITY;
-                for (int j = 0; j < n; j++) {
-                    if (i != j && (!visited[j] || j == currentTour[0])) {
-                        minEdge = Math.min(minEdge, cost[i][j]);
-                    }
-                }
-                lb += minEdge;
-            }
-        }
-
-        if (lb >= bestCost[0]) {
-            pruned[0]++;
-            return;
-        }
-
         for (int next = 0; next < n; next++) {
             if (!visited[next]) {
+                double nextCost = currentCost + cost[current][next];
+                if (nextCost + minOut[next] >= bestCost[0]) {
+                    pruned[0]++;
+                    continue;
+                }
                 visited[next] = true;
                 currentTour[count] = next;
-                bbDfs(cost, count + 1, next, currentCost + cost[current][next],
-                        currentTour, visited, bestTour, bestCost, nodes, pruned);
+                bbDfs(cost, minOut, count + 1, next, nextCost, currentTour, visited, bestTour, bestCost, nodes, pruned, truncated);
                 visited[next] = false;
+                if (truncated[0]) return;
             }
         }
     }
@@ -1832,11 +1905,43 @@ public class BenchmarkService {
             String algorithmName,
             String algorithmType,
             String complexity,
-            double executionTimeMs,
+            boolean isValid,
+            String status,
+            String invalidReason,
+            Double executionTimeMs,
             int[] tour,
-            double distanceKm,
-            double durationMin,
-            double weightedCost,
+            Double distanceKm,
+            Double durationMin,
+            Double weightedCost,
             String notes
-    ) {}
+    ) {
+        AlgorithmEvaluation(
+                String algorithmName,
+                String algorithmType,
+                String complexity,
+                double executionTimeMs,
+                int[] tour,
+                double distanceKm,
+                double durationMin,
+                double weightedCost,
+                String notes
+        ) {
+            this(algorithmName, algorithmType, complexity, true, "VALID", null,
+                    executionTimeMs, tour, distanceKm, durationMin, weightedCost, notes);
+        }
+
+        static AlgorithmEvaluation invalid(
+                String algorithmName,
+                String algorithmType,
+                String complexity,
+                String status,
+                String reason,
+                String notes
+        ) {
+            return new AlgorithmEvaluation(
+                    algorithmName, algorithmType, complexity, false, status, reason,
+                    null, new int[0], null, null, null, notes
+            );
+        }
+    }
 }
