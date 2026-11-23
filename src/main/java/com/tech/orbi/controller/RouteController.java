@@ -338,6 +338,7 @@ public class RouteController {
 
         return new RouteResponseDto(
                 route.getId(),
+                route.getName(),
                 driver,
                 route.getCreatedBy() != null ? route.getCreatedBy().getId() : null,
                 driverName,

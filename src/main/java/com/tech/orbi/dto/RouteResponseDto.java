@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public record RouteResponseDto(
         Long id,
+        String name,
         Driver driverId,
         UUID createdBy,
         String driverName,
@@ -18,4 +19,20 @@ public record RouteResponseDto(
         LocalDateTime createdAt,
         LocalDateTime assignedAt,
         LocalDateTime finalizedAt
-) {}
+) {
+    public RouteResponseDto(
+            Long id,
+            Driver driverId,
+            UUID createdBy,
+            String driverName,
+            RouteStatus status,
+            double totalDistance,
+            double totalCost,
+            Integer totalStops,
+            LocalDateTime createdAt,
+            LocalDateTime assignedAt,
+            LocalDateTime finalizedAt
+    ) {
+        this(id, null, driverId, createdBy, driverName, status, totalDistance, totalCost, totalStops, createdAt, assignedAt, finalizedAt);
+    }
+}

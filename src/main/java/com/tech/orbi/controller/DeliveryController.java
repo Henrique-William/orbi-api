@@ -1,7 +1,6 @@
 package com.tech.orbi.controller;
 
 import com.tech.orbi.Repository.DeliveryRepository;
-import com.tech.orbi.Repository.DriverRepository;
 import com.tech.orbi.Repository.RouteRepository;
 import com.tech.orbi.dto.DeliveryDetailsDto;
 import com.tech.orbi.dto.DeliveryDto;
@@ -28,12 +27,10 @@ public class DeliveryController {
 
     private final DeliveryRepository deliveryRepository;
     private final RouteRepository routeRepository;
-    private final DriverRepository driverRepository;
 
-    public DeliveryController(DeliveryRepository deliveryRepository, RouteRepository routeRepository, DriverRepository driverRepository) {
+    public DeliveryController(DeliveryRepository deliveryRepository, RouteRepository routeRepository) {
         this.deliveryRepository = deliveryRepository;
         this.routeRepository = routeRepository;
-        this.driverRepository = driverRepository;
     }
 
     @PatchMapping("/{id}/next-status")
@@ -47,8 +44,8 @@ public class DeliveryController {
         // Validação de segurança: O usuário/motorista tem permissão para esta entrega?
         validateDriverOwnership(delivery, authentication);
 
-        if (delivery.getRoute() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A entrega não está vinculada a uma rota.");
+        if (delivery.getRoute() == null || delivery.getRoute().getDriver() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível avançar o status da entrega pois a rota não possui motorista atribuído.");
         }
 
         switch (delivery.getStatus()) {
@@ -86,8 +83,8 @@ public class DeliveryController {
 
         validateDriverOwnership(delivery, authentication);
 
-        if (delivery.getRoute() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A entrega não está vinculada a uma rota.");
+        if (delivery.getRoute() == null || delivery.getRoute().getDriver() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível avançar o status da entrega pois a rota não possui motorista atribuído.");
         }
 
         if (delivery.getStatus() == DeliveryStatus.DELIVERED) {
@@ -128,6 +125,10 @@ public class DeliveryController {
 
         if (delivery.getStatus() == DeliveryStatus.CANCELLED) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A entrega já está cancelada.");
+        }
+
+        if (delivery.getStatus() == DeliveryStatus.SKIPPED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível cancelar uma entrega que já foi pulada.");
         }
 
         delivery.setStatus(DeliveryStatus.CANCELLED);
@@ -200,38 +201,38 @@ public class DeliveryController {
     }
 
     private void validateDriverOwnership(Delivery delivery, Authentication authentication) {
-        if (authentication == null) return;
-        boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("SCOPE_ADMIN"));
+        if (authentication == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não tem permissão para alterar esta entrega.");
+        }
+
+        boolean isAdmin = authentication.getAuthorities() != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "SCOPE_ADMIN".equals(a.getAuthority()));
 
         if (isAdmin) return;
 
-        if (authentication.getPrincipal() instanceof Jwt jwt) {
-            UUID userIdFromToken = UUID.fromString(jwt.getSubject());
+        if (!(authentication.getPrincipal() instanceof Jwt jwt)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não tem permissão para alterar esta entrega.");
+        }
 
-            var route = delivery.getRoute();
-            if (route == null) return;
+        UUID userIdFromToken;
+        try {
+            userIdFromToken = UUID.fromString(jwt.getSubject());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Token inválido ou sem identificador de usuário.");
+        }
 
-            // Se a rota ainda não possui motorista atribuído, auto-atribui ao motorista autenticado
-            if (route.getDriver() == null) {
-                driverRepository.findById(userIdFromToken).ifPresent(d -> {
-                    route.setDriver(d);
-                    route.setAssignedAt(LocalDateTime.now());
-                    if (route.getStatus() == RouteStatus.CREATED) {
-                        route.setStatus(RouteStatus.ASSIGNED);
-                    }
-                    routeRepository.save(route);
-                });
-            }
+        var route = delivery.getRoute();
+        boolean isAssignedDriver = route != null
+                && route.getDriver() != null
+                && route.getDriver().getUserId() != null
+                && route.getDriver().getUserId().equals(userIdFromToken);
+        boolean isCreator = route != null
+                && route.getCreatedBy() != null
+                && route.getCreatedBy().getId() != null
+                && route.getCreatedBy().getId().equals(userIdFromToken);
 
-            boolean isAssignedDriver = route.getDriver() != null && route.getDriver().getUserId().equals(userIdFromToken);
-            boolean isCreator = route.getCreatedBy() != null && route.getCreatedBy().getId().equals(userIdFromToken);
-            boolean isDriverRole = authentication.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("SCOPE_DRIVER") || a.getAuthority().equals("SCOPE_BASIC"));
-
-            if (!isAssignedDriver && !isCreator && !isDriverRole) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não tem permissão para alterar esta entrega.");
-            }
+        if (!isAssignedDriver && !isCreator) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não tem permissão para alterar esta entrega.");
         }
     }
 

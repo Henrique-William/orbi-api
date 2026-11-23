@@ -21,6 +21,9 @@ public class Route {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "name")
+    private String name;
+
     @ManyToOne
     @JoinColumn(name = "assigned_driver_id")
     private Driver driver;
