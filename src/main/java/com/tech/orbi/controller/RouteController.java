@@ -92,6 +92,9 @@ public class RouteController {
         }
 
         Route newRoute = new Route();
+        if (request.name() != null && !request.name().isBlank()) {
+            newRoute.setName(request.name().trim());
+        }
         if (driver != null) {
             newRoute.setDriver(driver);
             newRoute.setStatus(RouteStatus.ASSIGNED);
@@ -264,6 +267,28 @@ public class RouteController {
         }
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}")
+    @Transactional
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN') or hasAuthority('SCOPE_DRIVER') or hasAuthority('SCOPE_BASIC')")
+    public ResponseEntity<RouteResponseDto> updateRoute(
+            @PathVariable Long id,
+            @RequestBody RouteUpdateDto dto,
+            Authentication authentication
+    ) {
+        var route = routeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rota não encontrada"));
+
+        validateRouteOwnership(route, authentication);
+
+        if (dto != null && dto.name() != null) {
+            String cleanName = dto.name().trim();
+            route.setName(cleanName.isEmpty() ? null : cleanName);
+            routeRepository.save(route);
+        }
+
+        return ResponseEntity.ok(toDto(route));
     }
 
     @GetMapping
